@@ -9,7 +9,10 @@
     #wrap { height:100%; display:grid; place-items:center; }
     canvas{
       width:min(1200px,96vw);
-      height:min(760px,92vh);
+      /* Mantén proporción para evitar deformaciones en mobile */
+      aspect-ratio: 1200 / 760;
+      height:auto;
+      max-height:min(760px,92svh);
       border-radius:16px;
       box-shadow:0 18px 60px rgba(0,0,0,.45);
       background: radial-gradient(1200px 700px at 60% 40%, #0f1a3a 0%, #070b18 55%, #040611 100%);
@@ -376,6 +379,72 @@
     margin-bottom: 8px;
   }
 }
+  
+    /* ===== Touch controls (mobile) ===== */
+    #touchControls{
+      
+      position:fixed;
+      left:0; right:0;
+      bottom:48px; /* deja sitio al footer */
+      z-index:30;
+      display:none;
+      pointer-events:none;
+      padding:10px 10px 12px;
+    }
+    #touchControls.hidden{ display:none !important; }
+    #touchControls .row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      pointer-events:auto;
+    }
+    #touchControls .cluster{
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+    }
+    .tbtn{
+      width:64px; height:64px;
+      border-radius:18px;
+      border:1px solid rgba(180,210,255,.18);
+      background:rgba(10,16,34,.55);
+      backdrop-filter: blur(10px);
+      color:rgba(230,245,255,.95);
+      font-weight:950;
+      font-size:18px;
+      display:grid;
+      place-items:center;
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action:none;
+      box-shadow:0 10px 28px rgba(0,0,0,.35);
+    }
+    .tbtn:active, .tbtn.down{
+      background:rgba(120,190,255,.22);
+      border-color:rgba(180,220,255,.28);
+      transform: translateY(1px);
+    }
+    .tbtn.big{
+      width:90px; height:64px;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .tbtn.gold{
+      background: linear-gradient(180deg, rgba(255,210,90,0.92), rgba(200,140,25,0.88));
+      border-color: rgba(255,235,170,0.55);
+      color: rgba(10,16,34,0.98);
+    }
+    .tbtn.gold:active, .tbtn.gold.down{
+      filter: brightness(1.03);
+      transform: translateY(1px);
+    }
+
+    @media (pointer: coarse), (max-width: 720px){
+      #touchControls{ display:block; }
+      /* En mobile dejamos más aire abajo para controles */
+      canvas{ max-height: calc(92svh - 110px); }
+    }
+
   </style>
 </head>
 <body>
@@ -441,6 +510,21 @@
   </div>
 
   <div id="footer">© Disturbing Stories 2026 / Vianda Visual / <a href="https://www.disturbingstories.com" target="_blank" rel="noopener noreferrer">www.disturbingstories.com</a></div>
+
+  <div id="touchControls" class="hidden" aria-label="Controles táctiles">
+    <div class="row">
+      <div class="cluster">
+        <div class="tbtn" data-key="ArrowLeft">◀</div>
+        <div class="tbtn" data-key="ArrowRight">▶</div>
+      </div>
+      <div class="cluster">
+        <div class="tbtn big" data-key="ArrowDown">BRAKE</div>
+        <div class="tbtn big" data-key="ArrowUp">ACCEL</div>
+        <div class="tbtn gold big" data-key="Space">BOOST</div>
+      </div>
+    </div>
+  </div>
+
 
   <div id="wrap"><canvas id="c" width="1200" height="760"></canvas></div>
 
@@ -739,7 +823,37 @@
     keys.delete(e.code);
   });
 
-  // ---------- Track ----------
+  
+  // ---------- Touch controls (mobile) ----------
+  const touchControlsEl = document.getElementById("touchControls");
+
+  function setKey(code, isDown){
+    if(isDown) keys.add(code);
+    else keys.delete(code);
+  }
+
+  function bindTouchButton(btn){
+    const code = btn.dataset.key;
+    const down = () => { setKey(code, true); btn.classList.add("down"); };
+    const up = () => { setKey(code, false); btn.classList.remove("down"); };
+
+    // Pointer events cover touch + pen
+    btn.addEventListener("pointerdown", (e)=>{
+      if(introOverlay.style.display !== "none") return;
+      e.preventDefault();
+      btn.setPointerCapture?.(e.pointerId);
+      down();
+    }, {passive:false});
+
+    btn.addEventListener("pointerup", (e)=>{ e.preventDefault(); up(); }, {passive:false});
+    btn.addEventListener("pointercancel", (e)=>{ e.preventDefault(); up(); }, {passive:false});
+    btn.addEventListener("pointerleave", ()=> up());
+  }
+
+  if(touchControlsEl){
+    touchControlsEl.querySelectorAll(".tbtn").forEach(bindTouchButton);
+  }
+// ---------- Track ----------
   const RUNOFF_LEN = 2600;
   const TRACK_W = 360;
   const WALL_BOUNCE = 0.08;
@@ -1997,7 +2111,9 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
     renderMenu();
     menuEl.style.display="grid";
 
-    // Asegura que el video del menú está visible y vuelve a reproducirse (mobile-safe)
+    
+    if(touchControlsEl) touchControlsEl.classList.add("hidden");
+// Asegura que el video del menú está visible y vuelve a reproducirse (mobile-safe)
     menuVideo.style.display = "block";
     menuVideo.style.opacity = "1";
     menuVideo.style.visibility = "visible";
@@ -2024,7 +2140,10 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
     gameState="race";
     menuEl.style.display="none";
 
-    countdown=3.2;
+    
+
+    if(touchControlsEl) touchControlsEl.classList.remove("hidden");
+countdown=3.2;
     raceStarted=false;
     raceTime=0;
     bestKmh=0;
