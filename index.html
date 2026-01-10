@@ -40,7 +40,10 @@
     }
     .btn:hover{ background:rgba(80,140,255,.22); }
 
-    /* MENU */
+    
+    .hudBtns{ display:flex; gap:10px; align-items:center; pointer-events:auto; }
+    .hudBtns .btn{ display:inline-block; }
+/* MENU */
     #menu{
       position:fixed; inset:0;
       display:grid; place-items:center;
@@ -385,7 +388,7 @@
       
       position:fixed;
       left:0; right:0;
-      bottom:48px; /* deja sitio al footer */
+      bottom:54px; /* deja sitio al footer */
       z-index:30;
       display:none;
       pointer-events:none;
@@ -442,10 +445,34 @@
     @media (pointer: coarse), (max-width: 720px){
       #touchControls{ display:block; }
       /* En mobile dejamos más aire abajo para controles */
-      canvas{ max-height: calc(92svh - 110px); }
+      /* canvas sizing handled in mobile fixes */
     }
 
-  </style>
+  
+@media (max-width: 720px){
+  /* Hide top bubbles on mobile, keep buttons */
+  .hud .pill{ display:none; }
+  .hud{ justify-content:flex-end; }
+  .hudBtns{ flex-direction:column; align-items:flex-end; gap:8px; }
+  .hudBtns .btn{ width:auto; padding:10px 12px; border-radius:14px; }
+
+  /* Make game screen bigger while keeping aspect ratio */
+  #wrap{ width:100vw; }
+  canvas{
+    width:100vw;
+    height:auto;
+    max-height: calc(100svh - 170px); /* header/buttons + touch controls + footer */
+    border-radius: 12px;
+  }
+
+  /* Footer a bit smaller */
+  #footer{ font-size:10px; bottom:6px; }
+
+  /* Move version slightly down (but not overlapping footer) */
+  #versionTag{ bottom: 28px; }
+}
+
+</style>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute">
@@ -484,7 +511,10 @@
     <div class="pill"><b>Controls</b> — ↑ acel · ↓ freno (2s = reverse) · ←/→ girar · <b>Espacio</b> boost</div>
     <div class="pill" id="status">Cargando…</div>
     <div style="flex:1"></div>
-    <div class="btn" id="restart">Reiniciar</div>
+    <div class="hudBtns">
+      <div class="btn" id="restart">Reiniciar</div>
+      <div class="btn" id="exitToMenu">MENU</div>
+    </div>
   </div>
 
   <div id="menu" style="display:none;">
@@ -519,7 +549,6 @@
       </div>
       <div class="cluster">
         <div class="tbtn big" data-key="ArrowDown">BRAKE</div>
-        <div class="tbtn big" data-key="ArrowUp">ACCEL</div>
         <div class="tbtn gold big" data-key="Space">BOOST</div>
       </div>
     </div>
@@ -812,6 +841,8 @@
 
   // ---------- Input ----------
   const keys=new Set();
+  const isMobile = window.matchMedia && (window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(max-width: 720px)").matches);
+
   window.addEventListener("keydown",(e)=>{
     // intro blocks everything
     if(introOverlay.style.display !== "none") return;
@@ -1483,7 +1514,8 @@
 
   // ---------- Player controls ----------
   function handlePlayer(ship, dt){
-    ship.thrust = keys.has("ArrowUp") ? 1 : 0;
+    // Mobile: auto-accelerate (no ACCEL button)
+    ship.thrust = (isMobile && raceStarted && !ship.finished) ? 1 : (keys.has("ArrowUp") ? 1 : 0);
     const down = keys.has("ArrowDown");
     if(down) ship.downHold += dt;
     else ship.downHold = 0;
@@ -1491,6 +1523,7 @@
     ship.reverse = (ship.downHold >= 2.0 && !keys.has("ArrowUp")) ? 1 : 0;
     ship.steer = (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0);
     ship.boost = (keys.has("Space") && ship.boostEnergy > 0.01 && !ship.reverse) ? 1 : 0;
+    if(isMobile && ship.brake && !ship.reverse) ship.thrust = 0;
   }
 
   // ---------- AI ----------
@@ -1595,9 +1628,9 @@
     if(!me) return;
     const cp=Math.min(me.cpIndex,NUM_CPS);
 
-    const w=380, h=14;
+    const w=Math.min(420, canvas.width*0.44), h=14;
     const x=20;
-    const y0=canvas.height - 210;
+    const y0=canvas.height - (isMobile ? 320 : 210);
     const gap=36;
 
     ctx.save();
@@ -2106,6 +2139,7 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
   // ---------- Flow ----------
   async function showMenu(){
     postUI.style.display="none";
+    if(touchControls) touchControls.classList.add("hidden");
     gameState="menu";
     menuMode="main";
     renderMenu();
@@ -2131,6 +2165,7 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
 
   function startRaceFlow(){
     postUI.style.display="none";
+    if(touchControls) touchControls.classList.toggle("hidden", !isMobile);
     shipAudio.startPlayed = false;
 
     stopMenuMusic();
@@ -2223,6 +2258,11 @@ countdown=3.2;
     } else {
       showMenu();
     }
+  });
+
+  // Mobile/desktop: exit current race to main menu
+  exitToMenuBtn.addEventListener("click", ()=>{
+    showMenu();
   });
 
   // Gesture unlock: if music got blocked, this click will start it
