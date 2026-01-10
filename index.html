@@ -158,7 +158,14 @@
       margin-top:12px;
     }
     @media (max-width: 720px){
-      .shipGrid{ grid-template-columns: 1fr; }
+      .shipGrid{
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .shipImg{ height: 86px; }
+      .shipName{ font-size: 11px; }
+      .shipMeta{ font-size: 11px; }
+      #menuCard{ width: min(760px, 94vw); }
     }
     .shipCard{
       border-radius:14px;
@@ -335,6 +342,40 @@
       color: rgba(10,16,34,0.98);
       border:1px solid rgba(255,235,170,0.55);
     }
+
+/* ===== Mobile layout fixes ===== */
+@media (max-width: 720px){
+  #menu{
+    height: 100svh;
+  }
+  #menuCard{
+    max-height: calc(100svh - 90px);
+    overflow: hidden;
+  }
+  #menuContent{
+    max-height: calc(100svh - 240px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 6px;
+  }
+  .menuBtn{
+    padding: 11px 12px;
+    border-radius: 14px;
+  }
+  .subText{
+    max-height: 46svh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #versionTag{
+    bottom: 44px;
+    left: 10px;
+  }
+  #logoWrap{
+    width: min(420px, 86vw);
+    margin-bottom: 8px;
+  }
+}
   </style>
 </head>
 <body>
@@ -415,6 +456,21 @@
   const menuContent = document.getElementById('menuContent');
   const logoImg = document.getElementById('logo');
   const menuVideo = document.getElementById('menuVideo');
+
+  // Mantén el video de fondo del menú reproduciéndose en mobile (al volver a la pestaña o si se pausa)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (menuEl.style.display !== "none") {
+        menuVideo.play().catch(()=>{});
+      }
+    }
+  });
+  menuVideo.addEventListener("pause", () => {
+    if (menuEl.style.display !== "none") {
+      menuVideo.play().catch(()=>{});
+    }
+  });
+
 
   const postUI = document.getElementById('postUI');
   const postStats = document.getElementById('postStats');
@@ -1940,6 +1996,13 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
     menuMode="main";
     renderMenu();
     menuEl.style.display="grid";
+
+    // Asegura que el video del menú está visible y vuelve a reproducirse (mobile-safe)
+    menuVideo.style.display = "block";
+    menuVideo.style.opacity = "1";
+    menuVideo.style.visibility = "visible";
+    try{ menuVideo.currentTime = Math.max(0, menuVideo.currentTime); }catch{}
+
 
     stopRaceMusic();
     stopShipAudioAll();
