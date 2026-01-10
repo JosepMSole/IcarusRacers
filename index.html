@@ -300,23 +300,30 @@
       display:grid;
       place-items:center;
       background:#000;
+      position:fixed;
+      overflow:hidden;
     }
     #introVideo{
       width:100%;
       height:100%;
       object-fit:cover;
+      position:absolute;
+      inset:0;
+      z-index:0;
     }
     /* Fallback overlay if autoplay blocked (still unskippable, just “start playback”) */
     #introTap{
       position:absolute;
       inset:0;
-      display:none;
+      display:grid;
       place-items:center;
       background:rgba(0,0,0,0.45);
       backdrop-filter: blur(6px);
       color:#e6f0ff;
       text-align:center;
       padding:20px;
+      z-index:2;
+      pointer-events:auto;
     }
     #introTap .card{
       width:min(520px,92vw);
@@ -600,26 +607,37 @@
   // Hide version during intro
   versionTag.style.display = "none";
 
-  async async function tryPlayIntro(){
+  async function tryPlayIntro(){
+  // Always show the start overlay first (mobile browsers can "resolve" play() but still not start)
+  introTap.style.display = "grid";
+
   try {
-    introVideo.muted = false;     // audio ON
+    introVideo.muted = false; // audio ON
     introVideo.volume = 1.0;
-    await introVideo.play();      // intentará autoplay con audio
-    introTap.style.display = "none";
+    await introVideo.play();
+    // Don't hide here; wait for real playback signals (playing/timeupdate)
   } catch {
-    // Autoplay con audio bloqueado => pedimos un click para desbloquear audio
-    introTap.style.display = "grid";
+    // Autoplay with audio blocked => user must tap INICIAR
   }
+
+  // Watchdog: if after a moment the video hasn't advanced, keep the overlay visible
+  const t0 = introVideo.currentTime;
+  setTimeout(() => {
+    const stuck = introVideo.paused || introVideo.currentTime <= t0 + 0.001 || introVideo.readyState < 2;
+    if (stuck) introTap.style.display = "grid";
+  }, 500);
 }
 
   introStartBtn.addEventListener("click", async ()=>{
-  try{
-    introVideo.muted = false;     // audio ON
-    introVideo.volume = 1.0;
-    await introVideo.play();
-    introTap.style.display="none";
-  }catch{}
-});
+    try{
+      introVideo.muted = false;
+      introVideo.volume = 1.0;
+      await introVideo.play();
+      // overlay will hide on 'playing'/'timeupdate'
+    }catch{
+      showIntroTap();
+    }
+  });
 
 
   // Cannot skip: block all keys during intro
@@ -634,7 +652,21 @@
   window.addEventListener("keyup", blockKeysDuringIntro, {capture:true});
 
   // On intro end -> show menu + start menu music
-  introVideo.addEventListener("ended", async ()=>{
+  
+  // Intro playback guards (hide the overlay ONLY when we detect real playback)
+  function hideIntroTap(){
+    introTap.style.display = "none";
+  }
+  function showIntroTap(){
+    introTap.style.display = "grid";
+  }
+
+  introVideo.addEventListener("playing", hideIntroTap);
+  introVideo.addEventListener("timeupdate", ()=>{
+    if(introVideo.currentTime > 0.05) hideIntroTap();
+  });
+  introVideo.addEventListener("error", showIntroTap);
+introVideo.addEventListener("ended", async ()=>{
     introOverlay.style.display = "none";
     versionTag.style.display = "block";
     await showMenu(); // will start menu music
