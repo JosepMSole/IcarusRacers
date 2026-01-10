@@ -2212,10 +2212,15 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
 
   function startRaceFlow(){
     postUI.style.display="none";
-    if(touchControls) touchControls.classList.toggle("hidden", !isMobile);
-    shipAudio.startPlayed = false;
+    
 
-    stopMenuMusic();
+    
+
+    if (isMobile) {
+      window.location.href = "index_mobile.html";
+      return;
+    }
+stopMenuMusic();
     stopIntroNarr();
     playRaceMusic();
 
@@ -2457,5 +2462,6 @@ countdown=3.2;
 
 })();
 </script>
+
 </body>
 </html>
