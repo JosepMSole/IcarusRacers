@@ -1,0 +1,1712 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ICARUS RACERS — Mobile Race (v0.7)</title>
+  <style>
+    :root{
+      --bg:#070b18;
+      --panel:rgba(10,16,34,.55);
+      --panel2:rgba(10,16,34,.78);
+      --border:rgba(180,210,255,.14);
+      --text:#e6f0ff;
+      --gold1:rgba(255,210,90,0.95);
+      --gold2:rgba(200,140,25,0.92);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    html,body{ margin:0; height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; overflow:hidden; }
+    #raceRoot{
+      position:fixed; inset:0;
+      display:grid;
+      grid-template-rows: auto 1fr auto auto;
+      gap:10px;
+      padding: calc(10px + var(--safe-top)) 12px calc(10px + var(--safe-bottom)) 12px;
+      box-sizing:border-box;
+      background: radial-gradient(1200px 700px at 60% 40%, #0f1a3a 0%, #070b18 55%, #040611 100%);
+    }
+    #topBar{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      z-index:5;
+    }
+    .topBtn{
+      appearance:none;
+      border:none;
+      color:var(--text);
+      font-weight:900;
+      letter-spacing:.2px;
+      padding:10px 14px;
+      border-radius:14px;
+      background:rgba(80,140,255,.16);
+      border:1px solid rgba(140,190,255,.22);
+      backdrop-filter: blur(8px);
+      cursor:pointer;
+    }
+    .topBtn:active{ transform: translateY(1px); }
+    #gameArea{
+      position:relative;
+      width:100%;
+      height:100%;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 18px 60px rgba(0,0,0,.45);
+      background:#000;
+    }
+    canvas{
+      position:absolute; inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      touch-action:none;
+      background: radial-gradient(1200px 700px at 60% 40%, #0f1a3a 0%, #070b18 55%, #040611 100%);
+    }
+
+    /* Touch controls */
+    #controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1.15fr 1.15fr;
+      gap:14px;
+      align-items:stretch;
+      z-index:6;
+    }
+    .ctl{
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action: manipulation;
+      display:grid;
+      place-items:center;
+      height:76px;
+      border-radius:18px;
+      background:rgba(10,16,34,.62);
+      border:1px solid rgba(180,210,255,.14);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      font-weight:950;
+      letter-spacing:.3px;
+      color:rgba(230,245,255,0.96);
+      cursor:pointer;
+    }
+    .ctl:active{ transform: translateY(1px); }
+    .ctl.gold{
+      background: linear-gradient(180deg, var(--gold1), var(--gold2));
+      color: rgba(10,16,34,0.98);
+      border:1px solid rgba(255,235,170,0.55);
+    }
+    .ctl.small{ font-size:22px; }
+    .ctl.text{ font-size:18px; }
+
+    /* Footer + version */
+    #footer{
+      text-align:center;
+      font-size:11px;
+      opacity:.82;
+      z-index:6;
+      padding-bottom: 2px;
+      text-shadow: 0 2px 10px rgba(0,0,0,.45);
+    }
+    #footer a{
+      color: rgba(230,245,255,0.92);
+      text-decoration:none;
+      border-bottom:1px solid rgba(230,245,255,0.25);
+    }
+    #versionTag{
+      position:fixed;
+      left:12px;
+      bottom: calc(54px + var(--safe-bottom)); /* por encima del footer/controles */
+      z-index:7;
+      font-size:12px;
+      opacity:.72;
+      background:rgba(10,16,34,.45);
+      border:1px solid rgba(180,210,255,.10);
+      border-radius:10px;
+      padding:6px 9px;
+      backdrop-filter: blur(8px);
+      pointer-events:none;
+    }
+
+    /* Start overlay (unlock audio) */
+    #startOverlay{
+      position:absolute; inset:0;
+      display:grid;
+      place-items:center;
+      z-index:8;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+    #startOverlay .card{
+      width:min(560px, 92vw);
+      border-radius:18px;
+      padding:16px 14px;
+      background: rgba(10,16,34,0.72);
+      border:1px solid rgba(180,210,255,0.16);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      text-align:center;
+    }
+    #startOverlay .title{
+      font-weight:950;
+      font-size:18px;
+      letter-spacing:.2px;
+      margin-bottom:8px;
+    }
+    #startOverlay .hint{
+      opacity:.86;
+      font-size:13px;
+      line-height:1.45;
+      margin-bottom:12px;
+    }
+    #startOverlay .go{
+      display:inline-block;
+      cursor:pointer;
+      user-select:none;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:950;
+      background: linear-gradient(180deg, var(--gold1), var(--gold2));
+      color: rgba(10,16,34,0.98);
+      border:1px solid rgba(255,235,170,0.55);
+    }
+
+    @media (max-width: 380px){
+      .ctl{ height:68px; border-radius:16px; }
+      .ctl.text{ font-size:16px; }
+      #controls{ gap:10px; }
+    }
+  
+    /* Post-race UI */
+    #postUI{
+      position:fixed;
+      inset:0;
+      display:none;
+      place-items:center;
+      z-index:30;
+      background:rgba(0,0,0,0.42);
+      backdrop-filter: blur(6px);
+      padding: 18px 14px;
+    }
+    #postCard{
+      width:min(520px, 92vw);
+      border-radius:18px;
+      padding:16px 14px;
+      background:rgba(10,16,34,.78);
+      border:1px solid rgba(180,210,255,.16);
+      box-shadow:0 20px 70px rgba(0,0,0,.55);
+      text-align:center;
+    }
+    #postTitle{
+      font-size:32px;
+      font-weight:950;
+      letter-spacing:.4px;
+      margin:4px 0 10px;
+    }
+    #postStats{
+      font-size:14px;
+      opacity:.92;
+      line-height:1.55;
+      white-space:pre-wrap;
+      background:rgba(0,0,0,0.16);
+      border:1px solid rgba(180,210,255,0.10);
+      border-radius:14px;
+      padding:12px 12px;
+      margin:10px 0 0;
+      text-align:left;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="raceRoot">
+    <div id="topBar">
+      <button class="topBtn" id="restartBtn">Reiniciar</button>
+      <button class="topBtn" id="menuBtn">MENU</button>
+    </div>
+
+    <div id="gameArea">
+      <canvas id="c"></canvas>
+      <div id="startOverlay">
+        <div class="card">
+          <div class="title">ICARUS RACERS</div>
+          <div class="hint">Toca para iniciar la carrera (activa sonido y controles).<br>(No hay botón de acelerar: en móvil la nave acelera sola)</div>
+          <div class="go" id="startGo">INICIAR</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls" aria-label="Controles táctiles">
+      <div class="ctl small" id="btnLeft">◀</div>
+      <div class="ctl small" id="btnRight">▶</div>
+      <div class="ctl text" id="btnBrake">BRAKE</div>
+      <div class="ctl text gold" id="btnBoost">BOOST</div>
+    </div>
+
+
+    <div id="postUI">
+      <div id="postCard">
+        <div id="postTitle">RESULTADO</div>
+        <div id="postStats"></div>
+        <button class="topBtn" id="postMenuBtn" style="width:100%; margin-top:12px;">MENU PRINCIPAL</button>
+      </div>
+    </div>
+
+    <div id="footer">© Disturbing Stories 2026 / Vianda Visual / <a href="https://www.disturbingstories.com" target="_blank" rel="noopener noreferrer">www.disturbingstories.com</a></div>
+  </div>
+
+  <div id="versionTag">v0.7</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const gameArea = document.getElementById('gameArea');
+  const startOverlay = document.getElementById('startOverlay');
+  const startGo = document.getElementById('startGo');
+
+  const restartBtn = document.getElementById('restartBtn');
+  const menuBtn = document.getElementById('menuBtn');
+
+  const postUI = document.getElementById('postUI');
+  const postStats = document.getElementById('postStats');
+  const postMenuBtn = document.getElementById('postMenuBtn');
+
+  // Touch controls (no ACCEL in mobile)
+  const btnLeft  = document.getElementById('btnLeft');
+  const btnRight = document.getElementById('btnRight');
+  const btnBrake = document.getElementById('btnBrake');
+  const btnBoost = document.getElementById('btnBoost');
+
+  const touch = { left:false, right:false, brake:false, boost:false };
+
+  function bindHold(el, key){
+    const on = (e)=>{ e.preventDefault(); touch[key]=true; unlockAndMaybeStart(); };
+    const off= (e)=>{ e.preventDefault(); touch[key]=false; };
+    el.addEventListener('pointerdown', on, {passive:false});
+    el.addEventListener('pointerup', off, {passive:false});
+    el.addEventListener('pointercancel', off, {passive:false});
+    el.addEventListener('pointerleave', off, {passive:false});
+  }
+  bindHold(btnLeft,'left');
+  bindHold(btnRight,'right');
+  bindHold(btnBrake,'brake');
+  bindHold(btnBoost,'boost');
+
+  // Keyboard fallback (optional if opened on desktop)
+  const keys=new Set();
+  window.addEventListener('keydown',(e)=>{
+    keys.add(e.code);
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+    unlockAndMaybeStart();
+  },{passive:false});
+  window.addEventListener('keyup',(e)=>keys.delete(e.code));
+
+  // --------- Resize canvas to fill gameArea (no black bars) ----------
+  function resizeCanvas(){
+    const r = gameArea.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvas.width  = Math.max(1, Math.floor(r.width * dpr));
+    canvas.height = Math.max(1, Math.floor(r.height * dpr));
+  }
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('orientationchange', ()=>setTimeout(resizeCanvas, 250));
+  resizeCanvas();
+
+  // ---------- Assets ----------
+  const meteorImg = new Image(); meteorImg.src = "imagen/meteorito1.png";
+  const earthImg  = new Image(); earthImg.src  = "imagen/earth1.png";
+  const aiShipImg = new Image(); aiShipImg.src = "imagen/nave1.png";
+
+  const ship30Img = new Image(); ship30Img.src = "imagen/nave_30.png";
+  const ship31Img = new Image(); ship31Img.src = "imagen/nave_31.png";
+  const ship32Img = new Image(); ship32Img.src = "imagen/nave_32.png";
+
+  const trackBaseImg  = new Image(); trackBaseImg.src  = "imagen/track_holo_base.png";
+  const trackGlowImg  = new Image(); trackGlowImg.src  = "imagen/track_holo_glow.png";
+  const trackDecalImg = new Image(); trackDecalImg.src = "imagen/track_decals.png";
+
+  let meteorImgReady=false, earthImgReady=false, aiShipReady=false;
+  let ship30Ready=false, ship31Ready=false, ship32Ready=false;
+  let trackBaseReady=false, trackGlowReady=false, trackDecalReady=false;
+
+  meteorImg.onload = () => meteorImgReady=true;
+  earthImg.onload  = () => earthImgReady=true;
+  aiShipImg.onload = () => aiShipReady=true;
+  ship30Img.onload = () => ship30Ready=true;
+  ship31Img.onload = () => ship31Ready=true;
+  ship32Img.onload = () => ship32Ready=true;
+  trackBaseImg.onload  = () => { trackBaseReady=true; rebuildPatterns(); };
+  trackGlowImg.onload  = () => { trackGlowReady=true; rebuildPatterns(); };
+  trackDecalImg.onload = () => { trackDecalReady=true; rebuildPatterns(); };
+
+  // ---------- Audio ----------
+  const raceMusic = new Audio("music/music1.mp3");
+  raceMusic.loop = true;
+  raceMusic.volume = 0.45;
+
+  const ohno = new Audio("music/ohno.mp3");
+  ohno.loop = false;
+  ohno.volume = 0.95;
+
+  const shipAudio = {
+    enabled: true,
+    idle:     new Audio("music/engine_idle_loop.mp3"),
+    throttle: new Audio("music/engine_throttle_loop.mp3"),
+    boost:    new Audio("music/engine_boost_loop.mp3"),
+    brake:    new Audio("music/engine_brake_loop.mp3"),
+    start:    new Audio("music/engine_start_one_shot.mp3"),
+    hit:      new Audio("music/engine_hit_one_shot.mp3"),
+    started:false,
+    startPlayed:false,
+    hitCD:0,
+    vIdle:0, vThrottle:0, vBoost:0, vBrake:0
+  };
+  function initShipAudio(){
+    for (const a of [shipAudio.idle, shipAudio.throttle, shipAudio.boost, shipAudio.brake]){
+      a.loop = true;
+      a.volume = 0.0;
+      a.preload = "auto";
+    }
+    shipAudio.start.loop = false;
+    shipAudio.hit.loop = false;
+    shipAudio.start.volume = 0.85;
+    shipAudio.hit.volume = 0.85;
+  }
+  initShipAudio();
+
+  async function startShipAudioLoops(){
+    if(!shipAudio.enabled) return;
+    if(shipAudio.started) return;
+    shipAudio.started = true;
+    const loops=[shipAudio.idle, shipAudio.throttle, shipAudio.boost, shipAudio.brake];
+    for (const a of loops){
+      try{ a.currentTime=0; await a.play(); }catch{}
+    }
+  }
+  function playShipStartOnce(){
+    if(!shipAudio.enabled) return;
+    if(shipAudio.startPlayed) return;
+    shipAudio.startPlayed=true;
+    try{ shipAudio.start.currentTime=0; shipAudio.start.play().catch(()=>{}); }catch{}
+  }
+  function playShipHit(){
+    if(!shipAudio.enabled) return;
+    if(shipAudio.hitCD>0) return;
+    shipAudio.hitCD=0.18;
+    try{ shipAudio.hit.currentTime=0; shipAudio.hit.play().catch(()=>{}); }catch{}
+  }
+  async function playRaceMusic(){ try{ await raceMusic.play(); }catch{} }
+  function stopRaceMusic(){ try{ raceMusic.pause(); raceMusic.currentTime=0; }catch{} }
+  function playOhNo(){ try{ ohno.currentTime=0; ohno.play().catch(()=>{});}catch{} }
+
+  // ---------- WebAudio SFX ----------
+  let audioCtx=null, masterGain=null;
+  function ensureSfxAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.9;
+      masterGain.connect(audioCtx.destination);
+    }
+    if(audioCtx.state==="suspended") audioCtx.resume().catch(()=>{});
+  }
+  function playOneShot({type="sine", freq=440, dur=0.12, gain=0.12, freq2=null}){
+    try{
+      ensureSfxAudio();
+      const t0=audioCtx.currentTime;
+      const o=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      o.type=type;
+      o.frequency.setValueAtTime(freq, t0);
+      if(freq2) o.frequency.exponentialRampToValueAtTime(freq2, t0 + dur*0.9);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g).connect(masterGain);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    }catch{}
+  }
+  function playNoiseBurst({dur=0.18, gain=0.14, hp=900}){
+    try{
+      ensureSfxAudio();
+      const t0=audioCtx.currentTime;
+      const len=Math.floor(audioCtx.sampleRate * dur);
+      const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+      const data=buf.getChannelData(0);
+      for(let i=0;i<len;i++) data[i]=(Math.random()*2-1)*(1-i/len);
+      const src=audioCtx.createBufferSource();
+      src.buffer=buf;
+      const f=audioCtx.createBiquadFilter();
+      f.type="highpass";
+      f.frequency.setValueAtTime(hp,t0);
+      const g=audioCtx.createGain();
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(gain,t0+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+      src.connect(f).connect(g).connect(masterGain);
+      src.start(t0); src.stop(t0+dur+0.02);
+    }catch{}
+  }
+  function beepCheckpoint(){ playOneShot({type:"sine", freq:740, freq2:980, dur:0.13, gain:0.12}); }
+  function sfxAsteroidBreak(){ playNoiseBurst({dur:0.20, gain:0.18, hp:700}); playOneShot({type:"square", freq:220, freq2:90, dur:0.16, gain:0.10}); }
+  function sfxImpact(){ playNoiseBurst({dur:0.12, gain:0.10, hp:1000}); }
+
+  // ---------- Utils ----------
+  const TAU = Math.PI*2;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const hypot=Math.hypot;
+  const dist2=(ax,ay,bx,by)=>(ax-bx)**2+(ay-by)**2;
+  const normAng=(a)=>{ while(a>Math.PI)a-=TAU; while(a<-Math.PI)a+=TAU; return a; };
+  function pointSegClosest(px,py, ax,ay, bx,by){
+    const abx=bx-ax, aby=by-ay;
+    const apx=px-ax, apy=py-ay;
+    const ab2=abx*abx+aby*aby || 1e-9;
+    let t=(apx*abx + apy*aby)/ab2;
+    t=clamp(t,0,1);
+    const cx=ax+abx*t, cy=ay+aby*t;
+    return { d2: dist2(px,py,cx,cy), t, cx, cy };
+  }
+
+  // ---------- Track ----------
+  const RUNOFF_LEN = 2600;
+  const TRACK_W = 360;
+  const WALL_BOUNCE = 0.08;
+  const WALL_TANGENTIAL_LOSS = 0.03;
+
+  function generateMainPoints(){
+    const pts=[];
+    const N=34;
+    const step=1400;
+    const startY=1700;
+    for(let i=0;i<N;i++){
+      const y=startY - i*step;
+      const x =
+        300*Math.sin(i*0.30) +
+        180*Math.sin(i*0.14 + 1.1) +
+         95*Math.sin(i*0.62 + 0.3);
+      pts.push({x,y});
+    }
+    pts[0].x=0; pts[0].y=startY;
+    pts[1].x=36;
+
+    const last=pts[pts.length-1];
+    const prev=pts[pts.length-2];
+    const dx=last.x-prev.x, dy=last.y-prev.y;
+    const len=Math.hypot(dx,dy)||1;
+    const ux=dx/len, uy=dy/len;
+    pts.push({x:last.x+ux*(RUNOFF_LEN*0.55), y:last.y+uy*(RUNOFF_LEN*0.55)});
+    pts.push({x:last.x+ux*(RUNOFF_LEN*1.00), y:last.y+uy*(RUNOFF_LEN*1.00)});
+    return pts;
+  }
+  function buildPolyline(points){
+    const cum=[0];
+    let total=0;
+    for(let i=0;i<points.length-1;i++){
+      const a=points[i], b=points[i+1];
+      total += hypot(b.x-a.x,b.y-a.y);
+      cum.push(total);
+    }
+    return {points,cum,total};
+  }
+  const main = buildPolyline(generateMainPoints());
+  const finishS = Math.max(0, main.total - RUNOFF_LEN);
+
+  function sampleAt(poly,s){
+    s=clamp(s,0,poly.total);
+    let lo=0, hi=poly.cum.length-1;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(poly.cum[mid] < s) lo=mid+1;
+      else hi=mid;
+    }
+    const idx=Math.max(1,lo)-1;
+    const a=poly.points[idx], b=poly.points[idx+1];
+    const segLen=hypot(b.x-a.x,b.y-a.y)||1e-6;
+    const t=(s-poly.cum[idx])/segLen;
+    const x=lerp(a.x,b.x,t), y=lerp(a.y,b.y,t);
+    const ux=(b.x-a.x)/segLen, uy=(b.y-a.y)/segLen;
+    const nx=-uy, ny=ux;
+    return {x,y,ux,uy,nx,ny,idx,t};
+  }
+
+  function nearestOnPolyline(poly, px, py){
+    let best=null;
+    for(let i=0;i<poly.points.length-1;i++){
+      const a=poly.points[i], b=poly.points[i+1];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const len2=dx*dx+dy*dy || 1e-9;
+      let t=((px-a.x)*dx + (py-a.y)*dy)/len2;
+      t=clamp(t,0,1);
+      const nx=a.x+dx*t, ny=a.y+dy*t;
+      const d2=dist2(px,py,nx,ny);
+      if(!best || d2<best.d2){
+        const len=Math.sqrt(len2);
+        const ux=dx/len, uy=dy/len;
+        const lx=-uy, ly=ux;
+        const side=((px-nx)*lx + (py-ny)*ly);
+        const s=poly.cum[i] + len*t;
+        best={d2,x:nx,y:ny,ux,uy,lx,ly,side,s};
+      }
+    }
+    return best;
+  }
+  function nearestOnTrack(px, py){
+    const m=nearestOnPolyline(main,px,py);
+    return {hit:m, prog:m.s, ref:main};
+  }
+
+  // ---------- Checkpoints ----------
+  const NUM_CPS=25;
+  const checkpoints=[];
+  for(let i=1;i<=NUM_CPS;i++){
+    const s=(i/(NUM_CPS+1))*finishS;
+    const p=sampleAt(main,s);
+    checkpoints.push({i:i-1, s, x:p.x, y:p.y, nx:p.nx, ny:p.ny});
+  }
+  const startLine=(()=>{ const p=sampleAt(main,30); return {x:p.x,y:p.y,nx:1,ny:0,s:0}; })();
+  const finishLine=(()=>{ const p=sampleAt(main,finishS); return {x:p.x,y:p.y,nx:1,ny:0,s:finishS}; })();
+
+  // ---------- Earth scroll ----------
+  const camera={x:0,y:0,zoom:1};
+  const ships=[];
+  function drawEarthScroll(){
+    if(!earthImgReady) return;
+    const scale = canvas.width / earthImg.width;
+    const h = earthImg.height * scale;
+
+    const me = ships[0];
+    const prog01 = me ? clamp(me.maxProgress / Math.max(1, finishS), 0, 1) : 0;
+
+    const yStart = canvas.height - h;
+    const yEnd = 0;
+    const yProg = lerp(yStart, yEnd, prog01);
+    const camParY = -(camera.y - startLine.y) * 0.08 * camera.zoom;
+
+    const yFinal = clamp(yProg + camParY, yStart, yEnd);
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(earthImg, 0, yFinal, canvas.width, h);
+    ctx.restore();
+  }
+
+  // ---------- Depth dots ----------
+  const depthDots=[];
+  function initDepthDots(){
+    depthDots.length=0;
+    const count=420;
+    const yTop = sampleAt(main, finishS).y - 2200;
+    const yBottom = startLine.y + 2200;
+    for(let i=0;i<count;i++){
+      depthDots.push({
+        x: rand(-2400, 2400),
+        y: rand(yTop, yBottom),
+        r: rand(0.8, 2.4),
+        a: rand(0.08, 0.28),
+        par: rand(0.12, 0.28),
+        drift: rand(-14, 14)
+      });
+    }
+  }
+  function drawDepthDots(dt){
+    const z=camera.zoom;
+    ctx.save();
+    for(const d of depthDots){
+      d.y += d.drift * dt;
+      const sx = (d.x - camera.x*d.par)*z + canvas.width/2;
+      const sy = (d.y - camera.y*d.par)*z + canvas.height/2;
+      if(sx<-20||sx>canvas.width+20||sy<-20||sy>canvas.height+20) continue;
+      ctx.globalAlpha = d.a;
+      ctx.fillStyle = "rgba(230,245,255,1)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, d.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Track patterns ----------
+  let patBase=null, patGlow=null, patDecal=null;
+  function rebuildPatterns(){
+    try{
+      if(trackBaseReady)  patBase  = ctx.createPattern(trackBaseImg,  "repeat");
+      if(trackGlowReady)  patGlow  = ctx.createPattern(trackGlowImg,  "repeat");
+      if(trackDecalReady) patDecal = ctx.createPattern(trackDecalImg, "repeat");
+    }catch{}
+  }
+  function setPatternWorldTransform(pat, img, extraScrollPx){
+    if(!pat || !pat.setTransform || !img || !img.width) return false;
+    const z = camera.zoom;
+    const tileScale = z * 0.85;
+    const tx = (-camera.x * z) + canvas.width/2;
+    const ty = (-camera.y * z) + canvas.height/2 + extraScrollPx;
+    const m = new DOMMatrix();
+    m.translateSelf(tx, ty);
+    m.scaleSelf(tileScale, tileScale);
+    pat.setTransform(m);
+    return true;
+  }
+  function worldToScreen(wx,wy){
+    const z=camera.zoom;
+    return { x:(wx-camera.x)*z + canvas.width/2, y:(wy-camera.y)*z + canvas.height/2 };
+  }
+
+  // ---------- Drawing ----------
+  const TAU2 = Math.PI*2;
+  function drawStars(){
+    ctx.save();
+    ctx.globalAlpha=0.88;
+    for(let i=0;i<180;i++){
+      const px=(i*997)%8192;
+      const py=(i*613)%8192;
+      const wx=px-4096;
+      const wy=py-4096;
+      const par=0.03;
+      const z=camera.zoom;
+      const sx=(wx-camera.x*par)*z + canvas.width/2;
+      const sy=(wy-camera.y*par)*z + canvas.height/2;
+      const r=(i%7===0)?1.6:1.0;
+      if(sx<-12||sx>canvas.width+12||sy<-12||sy>canvas.height+12) continue;
+      ctx.fillStyle="rgba(220,235,255,0.75)";
+      ctx.beginPath(); ctx.arc(sx,sy,r,0,TAU2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawTrackTextured(poly, bodyAlpha){
+    const havePat = patBase && patGlow && patDecal && trackBaseReady && trackGlowReady && trackDecalReady;
+
+    ctx.save();
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle=`rgba(120,170,255,0.16)`;
+    ctx.lineWidth=TRACK_W+34;
+    ctx.beginPath();
+    for(let i=0;i<poly.points.length;i++){
+      const p=worldToScreen(poly.points[i].x, poly.points[i].y);
+      if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.lineWidth=TRACK_W;
+    ctx.beginPath();
+    for(let i=0;i<poly.points.length;i++){
+      const p=worldToScreen(poly.points[i].x, poly.points[i].y);
+      if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+    if(havePat && patBase.setTransform){
+      const drift = (raceTime * 120) * camera.zoom;
+      setPatternWorldTransform(patBase, trackBaseImg, drift);
+      ctx.globalAlpha = bodyAlpha;
+      ctx.strokeStyle = patBase;
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = bodyAlpha;
+      ctx.strokeStyle="rgba(20,28,58,0.88)";
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if(havePat && patGlow.setTransform && patDecal.setTransform){
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.lineWidth=TRACK_W;
+      ctx.beginPath();
+      for(let i=0;i<poly.points.length;i++){
+        const p=worldToScreen(poly.points[i].x, poly.points[i].y);
+        if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+      }
+      const driftG = (raceTime * 220) * camera.zoom;
+      setPatternWorldTransform(patGlow, trackGlowImg, driftG);
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = patGlow;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.lineWidth = TRACK_W*0.70;
+      ctx.beginPath();
+      for(let i=0;i<poly.points.length;i++){
+        const p=worldToScreen(poly.points[i].x, poly.points[i].y);
+        if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+      }
+      const driftD = (raceTime * 320) * camera.zoom;
+      setPatternWorldTransform(patDecal, trackDecalImg, driftD);
+      ctx.globalAlpha = 0.40;
+      ctx.strokeStyle = patDecal;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawLine(line,color,width){
+    const a=worldToScreen(line.x - (TRACK_W*0.52), line.y);
+    const b=worldToScreen(line.x + (TRACK_W*0.52), line.y);
+    ctx.save();
+    ctx.globalAlpha=0.92;
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.restore();
+  }
+  function drawStartFinish(){
+    drawLine(startLine,"rgba(160,255,200,0.85)",5);
+    drawLine(finishLine,"rgba(255,220,140,0.88)",6);
+  }
+  function drawCheckpoints(){
+    ctx.save();
+    for(const cp of checkpoints){
+      const a=worldToScreen(cp.x + cp.nx*(TRACK_W*0.48), cp.y + cp.ny*(TRACK_W*0.48));
+      const b=worldToScreen(cp.x - cp.nx*(TRACK_W*0.48), cp.y - cp.ny*(TRACK_W*0.48));
+      ctx.globalAlpha=0.12;
+      ctx.strokeStyle="rgba(210,230,255,0.95)";
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Meteorites ----------
+  const meteorites=[];
+  const meteorShards=[];
+  const BIN_SIZE=760;
+  let safeCorridor=[];
+  function buildSafeCorridor(){
+    safeCorridor=[];
+    const bins=Math.ceil(finishS / BIN_SIZE);
+    const half=TRACK_W*0.5;
+    const margin=56;
+    for(let i=0;i<bins;i++){
+      const t=i/Math.max(1,bins-1);
+      const base=0.65*Math.sin(t*TAU*1.00) + 0.35*Math.sin(t*TAU*2.05 + 1.1);
+      const x=base*(half-margin-14);
+      safeCorridor.push(clamp(x, -(half-margin), (half-margin)));
+    }
+  }
+  function generateMeteorites(){
+    meteorites.length=0;
+    meteorShards.length=0;
+    buildSafeCorridor();
+
+    const count=92;
+    const marginS=2100;
+    const half=TRACK_W*0.5;
+    const rMin=11, rMax=19;
+    const safeRadius=62;
+
+    const bins=Math.ceil(finishS/BIN_SIZE);
+    const binCounts=new Array(bins).fill(0);
+
+    let tries=0;
+    while(meteorites.length<count && tries<count*70){
+      tries++;
+      const s=rand(marginS, finishS-900);
+      const bin=clamp(Math.floor(s/BIN_SIZE),0,bins-1);
+      if(binCounts[bin]>=3) continue;
+
+      const p=sampleAt(main,s);
+      const lateral=rand(-(half-44),(half-44));
+      const safeX=safeCorridor[bin] ?? 0;
+      if(Math.abs(lateral-safeX) < safeRadius) continue;
+
+      const x=p.x + p.nx*lateral;
+      const y=p.y + p.ny*lateral;
+      const r=rand(rMin,rMax);
+
+      let ok=true;
+      for(const m of meteorites){
+        if(dist2(x,y,m.x,m.y) < (r+m.r+26)**2){ ok=false; break; }
+      }
+      if(!ok) continue;
+
+      meteorites.push({ x,y,r, alive:true, solidCooldown:0, hp:3, ang:rand(0,TAU), angVel:rand(-0.22,0.22) });
+      binCounts[bin]++;
+    }
+  }
+  function spawnMeteorShards(mx,my,mr, ship){
+    if(!meteorImgReady) return;
+    const pieces=12 + Math.floor(Math.random()*6);
+    const baseAng=Math.atan2(ship.vy, ship.vx);
+    for(let i=0;i<pieces;i++){
+      const size=rand(mr*0.55, mr*1.05);
+      const sx=rand(0,0.70)*meteorImg.width;
+      const sy=rand(0,0.70)*meteorImg.height;
+      const sw=rand(0.18,0.36)*meteorImg.width;
+      const sh=rand(0.18,0.36)*meteorImg.height;
+      const a=baseAng + rand(-1.25,1.25);
+      const sp=rand(260,650);
+      meteorShards.push({
+        x:mx+rand(-8,8), y:my+rand(-8,8),
+        vx:Math.cos(a)*sp + ship.vx*0.25,
+        vy:Math.sin(a)*sp + ship.vy*0.25,
+        ang:rand(0,TAU), angVel:rand(-3.3,3.3)*0.35,
+        life:rand(0.35,0.85),
+        size, sx,sy,sw,sh
+      });
+    }
+  }
+  function updateMeteorites(dt){
+    for(let i=meteorites.length-1;i>=0;i--){
+      const m=meteorites[i];
+      if(!m.alive){ meteorites.splice(i,1); continue; }
+      m.solidCooldown=Math.max(0,m.solidCooldown-dt);
+      m.ang += m.angVel*dt;
+    }
+    for(let i=meteorShards.length-1;i>=0;i--){
+      const s=meteorShards[i];
+      s.life -= dt;
+      s.x += s.vx*dt; s.y += s.vy*dt;
+      s.vx *= Math.pow(0.04, dt);
+      s.vy *= Math.pow(0.04, dt);
+      s.ang += s.angVel*dt;
+      if(s.life<=0) meteorShards.splice(i,1);
+    }
+  }
+  function drawMeteorites(){
+    for(const m of meteorites){
+      if(!m.alive) continue;
+      const p=worldToScreen(m.x,m.y);
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(m.ang);
+      const w=(m.r*2)*camera.zoom;
+      const h=(m.r*2)*camera.zoom;
+      ctx.globalAlpha=0.95;
+      if(meteorImgReady) ctx.drawImage(meteorImg,-w/2,-h/2,w,h);
+      ctx.restore();
+    }
+  }
+  function drawMeteorShards(){
+    if(!meteorImgReady) return;
+    ctx.save();
+    for(const s of meteorShards){
+      const p=worldToScreen(s.x,s.y);
+      const alpha=clamp(s.life/0.25,0,1);
+      ctx.globalAlpha=0.85*alpha;
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(s.ang);
+      const w=s.size*camera.zoom;
+      const h=s.size*camera.zoom;
+      ctx.drawImage(meteorImg, s.sx,s.sy,s.sw,s.sh, -w/2,-h/2,w,h);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // ---------- FX ----------
+  const particles=[];
+  function spawnHitSparks(x,y,n=22){
+    for(let i=0;i<n;i++){
+      particles.push({ x:x+rand(-7,7), y:y+rand(-7,7), vx:rand(-520,520), vy:rand(-520,520), life:rand(0.10,0.32), r:rand(1.0,3.0), c:"rgba(230,245,255,0.95)" });
+    }
+  }
+  function spawnExplosion(ship, scale=1){
+    const mult=scale;
+    spawnHitSparks(ship.x, ship.y, Math.floor(90*mult));
+    for(let i=0;i<Math.floor(60*mult);i++){
+      particles.push({
+        x:ship.x+rand(-10*mult,10*mult),
+        y:ship.y+rand(-10*mult,10*mult),
+        vx:rand(-700,700)*mult,
+        vy:rand(-700,700)*mult,
+        life:rand(0.12,0.55),
+        r:rand(1.0,3.6)*mult,
+        c:"rgba(180,240,255,0.9)"
+      });
+    }
+  }
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.life -= dt;
+      p.x += p.vx*dt; p.y += p.vy*dt;
+      p.vx *= Math.pow(0.001, dt);
+      p.vy *= Math.pow(0.001, dt);
+      p.r  *= Math.pow(0.05, dt);
+      if(p.life<=0 || p.r<0.2) particles.splice(i,1);
+    }
+  }
+  function drawParticles(){
+    ctx.save();
+    for(const p of particles){
+      const s=worldToScreen(p.x,p.y);
+      ctx.globalAlpha=clamp(p.life*2.2,0,1);
+      ctx.fillStyle=p.c;
+      ctx.beginPath(); ctx.arc(s.x,s.y,p.r*camera.zoom,0,TAU2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Ships ----------
+  const MAX_HITS=10;
+  const SHIP_WORLD_W = TRACK_W * 0.20;
+  function shipCollisionRadius(){ return SHIP_WORLD_W * 0.30; }
+
+  const shipDefs = [
+    { id:"30", img: ship30Img, ready:()=>ship30Ready, label:"ICARUS 3.0 - 3/0", blurb:"Gira muy bien",
+      tune:(s)=>{ s.turnRate *= 1.22; s.drift *= 0.90; } },
+    { id:"31", img: ship31Img, ready:()=>ship31Ready, label:"ICARUS 3.1 - JM/S", blurb:"Frena mejor",
+      tune:(s)=>{ s.brakePower *= 1.35; } },
+    { id:"32", img: ship32Img, ready:()=>ship32Ready, label:"ICARUS 3.2 - X/S", blurb:"BOOST más rápido",
+      tune:(s)=>{ s.boostMax *= 1.18; s.boostAccelMul *= 1.18; } },
+  ];
+  // En mobile-race no hay selección: por defecto 3.1 (ajusta si quieres)
+  let selectedShipId="31";
+
+  function makeShip(opts){
+    return {
+      name:opts.name,
+      x:opts.x, y:opts.y, ang:opts.ang,
+      vx:0, vy:0,
+      px: opts.x, py: opts.y,
+      isAI:!!opts.isAI,
+
+      accel: opts.accel ?? 1180,
+      turnRate: opts.turnRate ?? 3.55,
+      drift: opts.drift ?? 0.19,
+
+      baseMax: opts.baseMax ?? 980,
+      boostMax: opts.boostMax ?? 1780,
+      boostAccelMul: opts.boostAccelMul ?? 2.25,
+
+      brakePower: opts.brakePower ?? 1.0,
+
+      thrust:0, steer:0, brake:0, boost:0, reverse:0,
+      cpIndex:0, finished:false, finishTime:null,
+      progress:0, maxProgress:0, place:0,
+      boostEnergy: opts.boostEnergy ?? 1.0,
+      downHold:0,
+
+      hits:0, hitCD:0,
+      destroyed:false,
+
+      sprite: opts.sprite || aiShipImg,
+      spriteReady: opts.spriteReady || aiShipReady,
+
+      ai:{ skill: opts.aiSkill ?? 0.86 },
+    };
+  }
+  function destroyShip(ship){
+    if(ship.destroyed) return;
+    ship.destroyed=true;
+    spawnExplosion(ship, ship===ships[0] ? 10 : 1);
+    if(ship===ships[0]){
+      playOhNo();
+      // En mobile: si el jugador se destruye, volver automáticamente al menú principal (desktop)
+      if(!redirecting){
+        redirecting = true;
+        try{ stopRaceMusic(); }catch{}
+        try{ stopShipAudioAll(); }catch{}
+        // deja un breve instante para ver la explosión
+        setTimeout(()=>{ window.location.href = "index.html"; }, 900);
+      }
+    }
+  }
+  function applyHit(ship, amount=1){
+    if(ship.destroyed) return;
+    if(ship.hitCD>0) return;
+    ship.hits += amount;
+    ship.hitCD = 0.22;
+    playShipHit();
+    if(ship.hits>=MAX_HITS) destroyShip(ship);
+  }
+
+  // ---------- Boost ----------
+  const BOOST_DRAIN_PER_SEC = 0.40;
+  const BOOST_GAIN_PER_BREAK = 0.18;
+  const BOOST_GAIN_PER_CP = 0.07;
+  function awardBoostEnergy(ship, amount){ ship.boostEnergy = clamp(ship.boostEnergy + amount, 0, 1); }
+
+  // ---------- AI ----------
+  function handleAI(ship, dt){
+    const my=nearestOnTrack(ship.x, ship.y);
+    ship.progress=my.prog;
+    ship.maxProgress=Math.max(ship.maxProgress, ship.progress);
+
+    let targetS = ship.progress + 430;
+    const nextCp = checkpoints[ship.cpIndex] ?? null;
+    if(nextCp && ship.maxProgress < nextCp.s - 120) targetS = nextCp.s;
+
+    const tp=sampleAt(main,targetS);
+    const desired=Math.atan2(tp.y-ship.y, tp.x-ship.x);
+    let angErr=normAng(desired-ship.ang);
+
+    ship.steer = clamp(angErr*1.45, -1, 1);
+    ship.thrust = 1;
+    ship.brake = 0;
+    ship.reverse = 0;
+
+    const speed=hypot(ship.vx,ship.vy);
+    if(Math.abs(angErr) > 0.75 && speed > 980) ship.brake=1;
+
+    ship.boost = (ship.boostEnergy>0.02 && Math.abs(angErr)<0.18 && speed>650 && Math.random()<0.02) ? 1 : 0;
+  }
+
+  // ---------- Player (MOBILE) ----------
+  function handlePlayer(ship, dt){
+    if(raceOver){ ship.thrust=0; ship.steer=0; ship.brake=1; ship.reverse=0; ship.boost=0; return; }
+
+    // En mobile: aceleración automática (no hay botón ACCEL)
+    ship.thrust = 1;
+
+    // Mezcla touch + teclado (por si abres en desktop)
+    const left = touch.left || keys.has("ArrowLeft");
+    const right= touch.right|| keys.has("ArrowRight");
+    const brake= touch.brake|| keys.has("ArrowDown");
+    const boost= touch.boost|| keys.has("Space");
+
+    ship.steer = (right?1:0) - (left?1:0);
+
+    if(brake) ship.downHold += dt;
+    else ship.downHold = 0;
+
+    ship.brake = brake ? 1 : 0;
+    ship.reverse = (ship.downHold >= 2.0) ? 1 : 0;
+
+    ship.boost = (boost && ship.boostEnergy > 0.01 && !ship.reverse) ? 1 : 0;
+  }
+
+  // ---------- Camera ----------
+  function updateCamera(dt){
+    const me=ships[0];
+    if(!me) return;
+
+    const sp=hypot(me.vx,me.vy);
+    const boost=me.boost?1:0;
+
+    const baseZoomFar=0.72;
+    const boostZoomFar=0.66;
+    const speedFactor=clamp(sp/1750,0,1);
+    const targetZoom = lerp(baseZoomFar + 0.05, baseZoomFar, speedFactor) * (boost ? (boostZoomFar/baseZoomFar) : 1);
+    camera.zoom = lerp(camera.zoom, targetZoom, 1 - Math.pow(0.001, dt));
+
+    // Player lower on screen
+    const screenOffsetPx = Math.max(140, canvas.height*0.20);
+    const worldOffset = screenOffsetPx / Math.max(0.001, camera.zoom);
+
+    camera.x = lerp(camera.x, me.x, 1 - Math.pow(0.001, dt));
+    camera.y = lerp(camera.y, me.y - worldOffset, 1 - Math.pow(0.001, dt));
+  }
+
+  // ---------- HUD drawn in-canvas ----------
+  const KMH_PER_UNIT = 0.18;
+  function formatTime(t){
+    const m=Math.floor(t/60);
+    const s=t-m*60;
+    return `${m}:${s.toFixed(2).padStart(5,"0")}`;
+  }
+  function drawSpeedTimeAndHits(){
+    const me=ships[0];
+    if(!me) return;
+    const sp = hypot(me.vx,me.vy);
+    const kmh = Math.max(0, Math.round(sp * KMH_PER_UNIT));
+    bestKmh = Math.max(bestKmh, kmh);
+
+    ctx.save();
+    ctx.globalAlpha=0.55;
+    ctx.fillStyle="rgba(10,16,34,0.65)";
+    ctx.strokeStyle="rgba(180,210,255,0.18)";
+    ctx.lineWidth=1;
+    const w=220, h=106;
+    ctx.beginPath();
+    ctx.roundRect(12, 10, w, h, 14);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign="left";
+    ctx.textBaseline="top";
+    ctx.globalAlpha=0.95;
+
+    ctx.font="950 42px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="rgba(230,245,255,0.98)";
+    ctx.fillText(`${String(kmh).padStart(3,"0")} Km/h`, 22, 18);
+
+    ctx.font="800 18px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="rgba(230,245,255,0.85)";
+    const timeTxt = (gameState==="race" && raceStarted) ? formatTime(raceTime) : "0:00.00";
+    ctx.fillText(timeTxt, 24, 64);
+
+    ctx.font="900 18px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="rgba(255,190,190,0.95)";
+    ctx.fillText(`HITS: ${me.hits}/${MAX_HITS}`, 24, 86);
+
+    ctx.restore();
+  }
+  function drawBars(){
+    const me=ships[0];
+    if(!me) return;
+    const cp=Math.min(me.cpIndex,NUM_CPS);
+
+    const w=Math.min(380, canvas.width*0.42), h=14;
+    const x=20;
+    const y0=canvas.height - Math.max(240, canvas.height*0.30);
+    const gap=36;
+
+    ctx.save();
+    ctx.textAlign="left";
+    ctx.textBaseline="top";
+    ctx.globalAlpha=0.95;
+
+    ctx.font="950 24px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="rgba(230,245,255,0.92)";
+    ctx.fillText(`CP ${cp}/${NUM_CPS}`, x, y0);
+
+    ctx.globalAlpha=0.60;
+    ctx.fillStyle="rgba(230,245,255,0.18)";
+    ctx.fillRect(x, y0+34, w, h);
+    ctx.globalAlpha=0.95;
+    ctx.fillStyle="rgba(230,245,255,0.60)";
+    ctx.fillRect(x, y0+34, w*(cp/NUM_CPS), h);
+
+    ctx.globalAlpha=0.95;
+    ctx.fillStyle="rgba(230,245,255,0.92)";
+    ctx.fillText("BOOST", x, y0+34+gap);
+    ctx.globalAlpha=0.60;
+    ctx.fillStyle="rgba(230,245,255,0.18)";
+    ctx.fillRect(x, y0+34+gap+34, w, h);
+    ctx.globalAlpha=0.95;
+    ctx.fillStyle="rgba(120,210,255,0.70)";
+    ctx.fillRect(x, y0+34+gap+34, w*clamp(me.boostEnergy,0,1), h);
+    ctx.restore();
+  }
+
+  // ---------- Countdown overlay ----------
+  function drawCountdownOverlay(){
+    if(gameState!=="race" || raceStarted || waitingForTap) return;
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,0.30)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    let text="GO!";
+    if(countdown>2.2) text="3";
+    else if(countdown>1.2) text="2";
+    else if(countdown>0.2) text="1";
+
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.font="900 92px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    ctx.fillStyle="rgba(230,245,255,0.96)";
+    ctx.fillText(text, canvas.width/2, canvas.height/2 - 10);
+    ctx.restore();
+  }
+
+  function showPostResults(){
+    const me = ships[0];
+    if(!me) return;
+    raceOver = true;
+
+    // ranking (1..4)
+    const ranked = ships.slice().map(sh=>{
+      const prog = sh.finished ? (finishS + 99999) : sh.maxProgress;
+      const t = sh.finishTime ?? Infinity;
+      return {sh, prog, t};
+    }).sort((a,b)=>{
+      if(a.sh.finished && b.sh.finished) return a.t - b.t;
+      if(a.sh.finished) return -1;
+      if(b.sh.finished) return 1;
+      return b.prog - a.prog;
+    });
+    ranked.forEach((r,idx)=> r.sh.place = idx+1 );
+
+    const kmh = bestKmh;
+    const txt =
+`HAS QUEDADO EN ${me.place || 1} POSICIÓN
+
+Velocidad máxima: ${kmh} Km/h
+Tiempo: ${formatTime(raceTime)}
+Checkpoints: ${Math.min(me.cpIndex, NUM_CPS)}/${NUM_CPS}
+Hits: ${me.hits}/${MAX_HITS}`;
+
+    postStats.textContent = txt;
+    postUI.style.display = "grid";
+  }
+
+
+  // ---------- Ship drawing ----------
+  function drawShip(ship){
+    if(ship.destroyed) return;
+    const img = ship.sprite;
+    if(!img) return;
+
+    // Don't rely on a captured boolean (images may load after ship creation)
+    const ready = (img.complete && img.width > 0 && img.height > 0);
+
+    const p = worldToScreen(ship.x, ship.y);
+
+    // Keep size consistent even before load (avoid NaN)
+    const baseScale = ready ? (SHIP_WORLD_W / img.width) : 0;
+    const scale = baseScale * camera.zoom;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(ship.ang + Math.PI/2);
+
+    if(ready){
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, -w/2, -h/2, w, h);
+    }
+    ctx.restore();
+  }
+
+
+  // ---------- Collisions ship-ship ----------
+  function resolveShipShipCollisions(){
+    const r = shipCollisionRadius();
+    const minRelSpeedForHit = 240;
+    for(let i=0;i<ships.length;i++){
+      const a=ships[i];
+      if(a.destroyed) continue;
+      for(let j=i+1;j<ships.length;j++){
+        const b=ships[j];
+        if(b.destroyed) continue;
+
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const d=Math.hypot(dx,dy) || 1e-6;
+        const minD=r+r;
+        if(d < minD){
+          const nx=dx/d, ny=dy/d;
+
+          const push=(minD-d)*0.52;
+          a.x -= nx*push; a.y -= ny*push;
+          b.x += nx*push; b.y += ny*push;
+
+          const relvx = (b.vx - a.vx);
+          const relvy = (b.vy - a.vy);
+          const relN = relvx*nx + relvy*ny;
+
+          const bounce = 0.55;
+          if(relN < 0){
+            const imp = -relN * bounce;
+            a.vx -= nx*imp; a.vy -= ny*imp;
+            b.vx += nx*imp; b.vy += ny*imp;
+          }
+
+          const relSpeed = Math.hypot(relvx, relvy);
+          if(relSpeed > minRelSpeedForHit){
+            applyHit(a,1);
+            applyHit(b,1);
+            spawnHitSparks((a.x+b.x)*0.5, (a.y+b.y)*0.5, 16);
+          }
+        }
+      }
+    }
+  }
+
+  // ---------- Ship audio mix ----------
+  function updateShipAudioMix(dt, ship){
+    if(!shipAudio.enabled || !shipAudio.started || !ship || ship.destroyed) return;
+    shipAudio.hitCD = Math.max(0, shipAudio.hitCD - dt);
+
+    const speed = Math.hypot(ship.vx, ship.vy);
+    const s01 = Math.max(0, Math.min(1, speed / 1750));
+    const throttle = ship.thrust || 0;
+    const boosting = ship.boost ? 1 : 0;
+    const braking = (ship.brake && !ship.reverse) ? 1 : 0;
+
+    const targetIdle     = 0.10 + s01*0.22;
+    const targetThrottle = throttle * (0.10 + s01*0.50);
+    const targetBoost    = boosting * (0.22 + s01*0.55);
+    const targetBrake    = braking * (0.10 + s01*0.28);
+
+    const smooth = 1 - Math.pow(0.0008, dt);
+
+    shipAudio.vIdle     += (targetIdle     - shipAudio.vIdle)     * smooth;
+    shipAudio.vThrottle += (targetThrottle - shipAudio.vThrottle) * smooth;
+    shipAudio.vBoost    += (targetBoost    - shipAudio.vBoost)    * smooth;
+    shipAudio.vBrake    += (targetBrake    - shipAudio.vBrake)    * smooth;
+
+    shipAudio.idle.volume     = clamp(shipAudio.vIdle,     0, 1);
+    shipAudio.throttle.volume = clamp(shipAudio.vThrottle, 0, 1);
+    shipAudio.boost.volume    = clamp(shipAudio.vBoost,    0, 1);
+    shipAudio.brake.volume    = clamp(shipAudio.vBrake,    0, 1);
+
+    const baseRate = 0.95 + s01*0.35;
+    shipAudio.idle.playbackRate     = clamp(baseRate, 0.75, 1.35);
+    shipAudio.throttle.playbackRate = clamp(baseRate + throttle*0.15, 0.75, 1.55);
+    shipAudio.boost.playbackRate    = clamp(baseRate + 0.18, 0.75, 1.75);
+    shipAudio.brake.playbackRate    = 1.0;
+  }
+
+  // ---------- Game state ----------
+  let gameState="race";
+  let raceTime=0;
+  let countdown=3.2;
+  let raceStarted=false;
+  let bestKmh=0;
+  let waitingForTap=true;
+
+  // ---------- Physics update (ships + meteors) ----------
+  // Speed lines (BOOST)
+  const speedLines=[];
+  function updateSpeedLines(dt, boostIntensity){
+    // decay
+    for(let i=speedLines.length-1;i>=0;i--){
+      const s=speedLines[i];
+      s.life -= dt;
+      s.y += s.vy*dt;
+      if(s.life<=0) speedLines.splice(i,1);
+    }
+    if(boostIntensity>0.05){
+      const add = Math.floor(55 * boostIntensity * dt * 60);
+      for(let i=0;i<add;i++){
+        speedLines.push({
+          x: rand(0, canvas.width),
+          y: rand(0, canvas.height),
+          vy: rand(850, 2100) * (0.85 + boostIntensity),
+          life: rand(0.07, 0.16),
+          len: rand(18, 70) * (0.90 + boostIntensity)
+        });
+      }
+    }
+  }
+  function drawSpeedLinesOverlay(){
+    if(speedLines.length===0) return;
+    ctx.save();
+    ctx.strokeStyle="rgba(230,245,255,0.85)";
+    ctx.lineWidth=2;
+    for(const s of speedLines){
+      ctx.globalAlpha = clamp(s.life*7, 0, 0.75);
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x, s.y - s.len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function updateShip(ship, dt){
+    if(ship.destroyed) return;
+
+    ship.hitCD=Math.max(0,ship.hitCD-dt);
+    ship.px = ship.x; ship.py = ship.y;
+
+    if(gameState==="race"){
+      if(!raceStarted){
+        ship.thrust=0; ship.brake=0; ship.boost=0; ship.reverse=0; ship.steer*=0.6;
+      }else if(!ship.finished){
+        if(ship.isAI) handleAI(ship, dt);
+        else handlePlayer(ship, dt);
+      }else{
+        ship.boost=0; ship.thrust=0; ship.brake=1; ship.reverse=0;
+      }
+    }
+
+    if(ship.boost){
+      ship.boostEnergy = Math.max(0, ship.boostEnergy - BOOST_DRAIN_PER_SEC*dt);
+      if(ship.boostEnergy <= 0.01) ship.boost=0;
+    }
+
+    const speed=hypot(ship.vx,ship.vy);
+    const speed01=clamp(speed/1300,0,1);
+    const turn=ship.turnRate*(0.70 + speed01*0.85);
+    ship.ang += ship.steer*turn*dt;
+
+    let acc = ship.accel*ship.thrust;
+    if(ship.boost) acc *= ship.boostAccelMul;
+    if(ship.reverse) acc = -ship.accel*0.55;
+
+    ship.vx += Math.cos(ship.ang)*acc*dt;
+    ship.vy += Math.sin(ship.ang)*acc*dt;
+
+    if(ship.brake && !ship.reverse){
+      const pow = ship.brakePower || 1.0;
+      ship.vx *= Math.pow(0.02, dt * pow);
+      ship.vy *= Math.pow(0.02, dt * pow);
+    }
+
+    const forward = Math.cos(ship.ang)*ship.vx + Math.sin(ship.ang)*ship.vy;
+    ship.vx = lerp(Math.cos(ship.ang)*forward, ship.vx, ship.drift);
+    ship.vy = lerp(Math.sin(ship.ang)*forward, ship.vy, ship.drift);
+
+    const maxV = ship.reverse ? 430 : (ship.boost ? ship.boostMax : ship.baseMax);
+    const v=hypot(ship.vx,ship.vy);
+    if(v>maxV){
+      const k=maxV/(v||1);
+      ship.vx*=k; ship.vy*=k;
+    }
+
+    const fr = ship.boost ? 0.86 : 0.72;
+    ship.vx *= Math.pow(fr, dt);
+    ship.vy *= Math.pow(fr, dt);
+
+    ship.x += ship.vx*dt;
+    ship.y += ship.vy*dt;
+
+    const t=nearestOnTrack(ship.x,ship.y);
+    ship.progress=t.prog;
+    ship.maxProgress=Math.max(ship.maxProgress, ship.progress);
+
+    // Walls
+    const limit=TRACK_W*0.5;
+    const over=Math.abs(t.hit.side)-limit;
+    if(over>0){
+      const sign=Math.sign(t.hit.side);
+      ship.x -= t.hit.lx*over*sign;
+      ship.y -= t.hit.ly*over*sign;
+
+      const vn = ship.vx*t.hit.lx + ship.vy*t.hit.ly;
+      const vt = ship.vx*t.hit.ux + ship.vy*t.hit.uy;
+
+      const vn2 = -vn*(1 - WALL_BOUNCE);
+      const vt2 = vt*(1 - WALL_TANGENTIAL_LOSS);
+
+      ship.vx = t.hit.lx*vn2 + t.hit.ux*vt2;
+      ship.vy = t.hit.ly*vn2 + t.hit.uy*vt2;
+    }
+
+    // Checkpoints
+    while(ship.cpIndex<NUM_CPS && ship.maxProgress >= (checkpoints[ship.cpIndex].s - 80)){
+      ship.cpIndex++;
+      awardBoostEnergy(ship, BOOST_GAIN_PER_CP);
+      if(!ship.isAI && raceStarted) beepCheckpoint();
+    }
+
+    // Meteor collisions
+    const sr=shipCollisionRadius();
+    for(const m of meteorites){
+      if(!m.alive) continue;
+      if(m.solidCooldown > 0) continue;
+
+      const rr = (m.r) + sr;
+      const hit = pointSegClosest(m.x,m.y, ship.px,ship.py, ship.x,ship.y);
+
+      if(hit.d2 < rr*rr){
+        m.solidCooldown = 0.75;
+
+        let nx = (hit.cx - m.x);
+        let ny = (hit.cy - m.y);
+        let nd = Math.hypot(nx,ny) || 1e-6;
+        nx/=nd; ny/=nd;
+
+        if(ship.boost && raceStarted){
+          m.alive=false;
+          spawnMeteorShards(m.x,m.y,m.r,ship);
+          sfxAsteroidBreak();
+          awardBoostEnergy(ship, BOOST_GAIN_PER_BREAK);
+        }else{
+          sfxImpact();
+          applyHit(ship, 1);
+
+          const pushOut = (rr - Math.sqrt(hit.d2)) + 2;
+          ship.x = ship.x + nx * pushOut;
+          ship.y = ship.y + ny * pushOut;
+
+          const vn = ship.vx*nx + ship.vy*ny;
+          if(vn < 0){
+            ship.vx -= nx * (1.6*vn);
+            ship.vy -= ny * (1.6*vn);
+          }
+          ship.vx *= 0.78;
+          ship.vy *= 0.78;
+
+          spawnHitSparks(hit.cx, hit.cy, 18);
+        }
+      }
+    }
+
+    // Finish
+    if(!ship.finished && ship.cpIndex>=NUM_CPS && ship.maxProgress >= finishS - 40){
+      ship.finished=true;
+      ship.finishTime=raceTime;
+    }
+  }
+
+  // ---------- Init race entities ----------
+  function resetRaceEntities(genMets){
+    particles.length=0;
+    ships.length=0;
+    if(genMets) generateMeteorites();
+
+    const s0=20;
+    const p0=sampleAt(main,s0);
+    const ang0=Math.atan2(p0.uy,p0.ux);
+
+    const offsets=[-120,-40,40,120];
+
+    const def = shipDefs.find(d=>d.id===selectedShipId) || shipDefs[1];
+
+    const player = makeShip({
+      name:"Tú",
+      x:p0.x + p0.nx*offsets[0],
+      y:p0.y + p0.ny*offsets[0],
+      ang:ang0,
+      boostEnergy:1.0,
+      sprite: def.img,
+      spriteReady: def.ready()
+    });
+    def.tune(player);
+    ships.push(player);
+
+    ships.push(makeShip({
+      name:"Nova", isAI:true, aiSkill:0.86,
+      x:p0.x + p0.nx*offsets[1],
+      y:p0.y + p0.ny*offsets[1],
+      ang:ang0, boostEnergy:1.0,
+      sprite: aiShipImg, spriteReady: aiShipReady
+    }));
+    ships.push(makeShip({
+      name:"Kite", isAI:true, aiSkill:0.84,
+      x:p0.x + p0.nx*offsets[2],
+      y:p0.y + p0.ny*offsets[2],
+      ang:ang0, boostEnergy:1.0,
+      sprite: aiShipImg, spriteReady: aiShipReady
+    }));
+    ships.push(makeShip({
+      name:"Vex", isAI:true, aiSkill:0.88,
+      x:p0.x + p0.nx*offsets[3],
+      y:p0.y + p0.ny*offsets[3],
+      ang:ang0, boostEnergy:1.0,
+      sprite: aiShipImg, spriteReady: aiShipReady
+    }));
+
+    camera.x=p0.x; camera.y=p0.y; camera.zoom=0.74;
+    initDepthDots();
+
+    bestKmh=0;
+    raceTime=0;
+    countdown=3.2;
+    raceStarted=false;
+    shipAudio.startPlayed=false;
+
+    postUI.style.display="none";
+    raceOver=false;
+    redirecting=false;
+  }
+
+  // ---------- Buttons ----------
+  restartBtn.addEventListener('click', ()=>{
+    unlockAndMaybeStart(true);
+    postUI.style.display="none";
+    raceOver=false;
+    redirecting=false;
+    resetRaceEntities(true);
+  });
+
+  menuBtn.addEventListener('click', ()=>{
+    // Vuelve al HTML principal (ajusta el nombre si tu index se llama distinto)
+    window.location.href = "index.html";
+  });
+
+  postMenuBtn.addEventListener('click', ()=>{
+    window.location.href = "index.html";
+  });
+
+  // ---------- Unlock/start ----------
+  async function unlockAudio(){
+    ensureSfxAudio();
+    await startShipAudioLoops();
+    await playRaceMusic();
+  }
+
+  async function unlockAndMaybeStart(forceReset=false){
+    if(waitingForTap){
+      waitingForTap=false;
+      startOverlay.style.display="none";
+      await unlockAudio();
+      // arranca countdown desde 3.2
+      countdown=3.2;
+      raceStarted=false;
+      raceTime=0;
+      shipAudio.startPlayed=false;
+    }
+    if(forceReset){
+      // already handled elsewhere
+    }
+  }
+
+  startGo.addEventListener('click', async ()=>{
+    await unlockAndMaybeStart();
+  });
+  gameArea.addEventListener('pointerdown', ()=>unlockAndMaybeStart(), {passive:true});
+
+  // ---------- Loop ----------
+  let last=performance.now();
+  function tick(now){
+    const dt=clamp((now-last)/1000, 0, 0.033);
+    last=now;
+
+    if(!waitingForTap){
+      if(!raceStarted){
+        countdown -= dt;
+        if(countdown <= 0){
+          raceStarted=true;
+          countdown=0;
+          playShipStartOnce();
+        }
+      }else{
+        raceTime += dt;
+      }
+    }
+
+    for(const sh of ships) updateShip(sh, dt);
+    resolveShipShipCollisions();
+    updateMeteorites(dt);
+    updateParticles(dt);
+    updateCamera(dt);
+
+    const me=ships[0];
+    // BOOST speed lines
+    if(me && raceStarted && !waitingForTap && !me.destroyed){
+      const bi = me.boost ? clamp(Math.hypot(me.vx,me.vy)/(me.boostMax||1),0,1) : 0;
+      updateSpeedLines(dt, bi);
+    } else {
+      updateSpeedLines(dt, 0);
+    }
+    if(me) updateShipAudioMix(dt, me);
+
+
+    // Track max speed
+    if(me && !me.destroyed){
+      const kmhNow = Math.max(0, Math.round(Math.hypot(me.vx,me.vy) * KMH_PER_UNIT));
+      bestKmh = Math.max(bestKmh, kmhNow);
+    }
+
+    // Si termina la carrera, mostrar resultados (con botón a menú principal)
+    if(!raceOver && me && me.finished && !me.destroyed){
+      showPostResults();
+    }
+
+
+    // Render
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawStars();
+    drawEarthScroll();
+    drawDepthDots(dt);
+    drawTrackTextured(main, 0.92);
+    drawCheckpoints();
+    drawStartFinish();
+    drawMeteorites();
+    drawMeteorShards();
+    drawParticles();
+
+    // draw ships (simple order)
+    for(const s of ships.slice().reverse()) drawShip(s);
+
+    // BOOST overlay
+    if(me && raceStarted && !waitingForTap && me.boost && !me.destroyed) drawSpeedLinesOverlay();
+
+    drawSpeedTimeAndHits();
+    drawBars();
+    drawCountdownOverlay();
+
+    requestAnimationFrame(tick);
+  }
+
+  // Boot
+  generateMeteorites();
+  resetRaceEntities(true);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
