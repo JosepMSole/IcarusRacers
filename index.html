@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ICARUS RACERS (v0.7)</title>
+  <title>ICARUS RACERS (v0.8-9)</title>
   <style>
     html, body { margin:0; height:100%; background:#070b18; color:#e6f0ff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
     #wrap { height:100%; display:grid; place-items:center; }
@@ -68,7 +68,7 @@
     }
     #menuCard{
       position:relative;
-      width:min(720px,92vw);
+      width: min(560px, 88vw);
       border-radius:18px;
       padding:22px 18px 18px;
       background:rgba(10,16,34,.62);
@@ -113,6 +113,8 @@
       border:1px solid rgba(140,190,255,.22);
       background:rgba(80,140,255,.16);
       color:#e6f0ff;
+          text-transform: uppercase;
+      letter-spacing: .6px;
     }
     .menuBtn:hover{ background:rgba(80,140,255,.22); }
     .menuBtn.secondary{
@@ -135,6 +137,7 @@
       letter-spacing:.3px;
       margin: 2px 0 10px;
       text-align:center;
+          text-transform: uppercase;
     }
     .subText{
       opacity:.9;
@@ -265,22 +268,54 @@
       backdrop-filter: blur(4px);
     }
     #postCard{
-      width:min(680px,92vw);
+      width:min(840px,94vw);
       border-radius:18px;
       padding:18px 16px;
       background:rgba(10,16,34,.72);
       border:1px solid rgba(180,210,255,.16);
       box-shadow:0 20px 70px rgba(0,0,0,.55);
       text-align:center;
-    }
+          font-family: "Orbitron", "Audiowide", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      text-transform: uppercase;
+}
     #postTitle{
+      text-shadow: 0 0 18px rgba(170,240,255,0.35);
+
       font-size:36px;
       font-weight:950;
       letter-spacing:.4px;
       margin:4px 0 10px;
     }
+    
+    /* RESULTADO: diseño orientado a tiempos (estilo sci‑fi / motos) */
+    #postStats .timeLine{
+      font-size:40px;           /* el doble aprox. que el resto */
+      font-weight:950;
+      letter-spacing:1px;
+      line-height:1.15;
+      margin: 10px 0 16px;
+      text-shadow: 0 0 18px rgba(170,240,255,0.22);
+    }
+    #postStats .statLine{
+      font-size:20px;
+      line-height:1.55;
+      margin: 8px 0;
+      letter-spacing:0.6px;
+    }
+    #postStats .hitsLine{
+      font-size:32px;           /* doble aprox. que la línea normal */
+      font-weight:950;
+      letter-spacing:0.9px;
+      line-height:1.2;
+      margin: 14px 0 6px;
+      text-shadow: 0 0 18px rgba(255,210,90,0.16);
+    }
+    #postStats .statLine b{
+      font-weight:950;
+    }
+
     #postStats{
-      font-size:16px;
+      font-size:17px;
       opacity:.9;
       line-height:1.55;
       white-space:pre-wrap;
@@ -388,7 +423,9 @@
   .menuBtn{
     padding: 11px 12px;
     border-radius: 14px;
-  }
+        text-transform: uppercase;
+      letter-spacing: .6px;
+    }
   .subText{
     max-height: 46svh;
     overflow-y: auto;
@@ -404,6 +441,59 @@
   }
 }
   
+    
+    /* Start overlay (race) */
+    #raceStartOverlay{
+      position:absolute; inset:0;
+      display:none;
+      place-items:center;
+      z-index:25;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+    #raceStartOverlay .card{
+      width:min(190px, 54vw);
+      border-radius:18px;
+      max-width:200px;
+      padding:14px 14px 16px;
+      background: rgba(10,16,34,0.72);
+      border:1px solid rgba(180,210,255,0.16);
+      box-shadow: 0 18px 60px rgba(0,0,0,55);
+      text-align:center;
+    }
+    #raceStartOverlay .raceCode{
+      width:100%;
+      font-family: "Orbitron", "Audiowide", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-weight:950;
+      font-size:38px;
+      letter-spacing: 1.5px;
+      padding:8px 0 8px;
+      border-radius:14px;
+      background: rgba(0,0,0,0.18);
+      border:1px solid rgba(180,210,255,0.10);
+      box-shadow: 0 0 18px rgba(160,230,255,0.32);
+      text-shadow: 0 0 18px rgba(170,240,255,0.85), 0 0 40px rgba(120,200,255,0.55);
+      margin-bottom:10px;
+    }
+    #raceStartOverlay .go{
+      width:160px;
+      margin: 0 auto;
+      cursor:pointer;
+      user-select:none;
+      padding:8px 12px;
+      border-radius:14px;
+      font-weight:950;
+      font-size:16px;
+      background: linear-gradient(180deg, rgba(255,235,120,1), rgba(255,190,40,0.98)) !important;
+      background-color: #ffcc00;
+      color: rgba(10,16,34,0.98);
+      border:1px solid rgba(255,235,170,0.55);
+      box-shadow: 0 0 18px rgba(255,220,120,0.75), 0 0 40px rgba(255,200,80,0.45);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+
+
     /* ===== Touch controls (mobile) ===== */
     #touchControls{
       
@@ -519,21 +609,20 @@
     </video>
     <div id="introTap">
       <div class="card">
-        <div class="title">Iniciando vídeo de introducción…</div>
-        <div class="hint">Si tu navegador bloquea el autoplay, pulsa el botón para comenzar. (No se puede omitir)</div>
+        
         <div class="btn2" id="introStartBtn">INICIAR</div>
       </div>
     </div>
   </div>
 
-  <div id="versionTag">v0.7</div>
+  <div id="versionTag">v0.8-9</div>
 
   <div class="hud">
     <div class="pill"><b>Controls</b> — ↑ acel · ↓ freno (2s = reverse) · ←/→ girar · <b>Espacio</b> boost</div>
     <div class="pill" id="status">Cargando…</div>
     <div style="flex:1"></div>
     <div class="hudBtns">
-      <div class="btn" id="restart">Reiniciar</div>
+      <div class="btn" id="restart">REINICIAR</div>
       <div class="btn" id="exitToMenu">MENU</div>
     </div>
   </div>
@@ -576,7 +665,15 @@
   </div>
 
 
-  <div id="wrap"><canvas id="c" width="1200" height="760"></canvas></div>
+  <div id="wrap">
+    <canvas id="c" width="1200" height="760"></canvas>
+    <div id="raceStartOverlay" aria-label="Inicio de carrera">
+      <div class="card">
+        <div class="raceCode" id="raceCode">2026</div>
+        <div class="go" id="raceStartGo">INICIAR</div>
+      </div>
+    </div>
+  </div>
 
 <script>
 (() => {
@@ -586,6 +683,13 @@
   const statusEl = document.getElementById('status');
   const restartBtn = document.getElementById('restart');
   const exitToMenuBtn = document.getElementById('exitToMenu');
+
+
+  // Race start overlay (unlock audio + start)
+  const raceStartOverlay = document.getElementById('raceStartOverlay');
+  const raceCodeEl = document.getElementById('raceCode');
+  const raceStartGo = document.getElementById('raceStartGo');
+  let waitingForTap = false;
 
   const menuEl = document.getElementById('menu');
   const menuContent = document.getElementById('menuContent');
@@ -746,7 +850,21 @@ introVideo.addEventListener("ended", async ()=>{
   ohno.loop = false;
   ohno.volume = 0.95;
 
-  async function playMenuMusic(){ try{ await menuMusic.play(); }catch{} }
+
+  const restartSfx = new Audio("music/restart.mp3");
+  restartSfx.loop = false;
+  restartSfx.volume = 0.90;
+
+  
+  const sfx321 = new Audio("music/321GO.mp3");
+  sfx321.loop = false;
+  sfx321.volume = 0.95;
+
+  const endaudio = new Audio("music/endaudio.mp3");
+  endaudio.loop = false;
+  endaudio.volume = 0.95;
+
+async function playMenuMusic(){ try{ await menuMusic.play(); }catch{} }
   function stopMenuMusic(){ try{ menuMusic.pause(); menuMusic.currentTime=0; }catch{} }
   async function playRaceMusic(){ try{ await raceMusic.play(); }catch{} }
   function stopRaceMusic(){ try{ raceMusic.pause(); raceMusic.currentTime=0; }catch{} }
@@ -1100,7 +1218,7 @@ introVideo.addEventListener("ended", async ()=>{
 
     const yFinal = clamp(yProg + camParY, yStart, yEnd);
     ctx.save();
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 1.0;
     ctx.drawImage(earthImg, 0, yFinal, canvas.width, h);
     ctx.restore();
   }
@@ -1396,12 +1514,45 @@ introVideo.addEventListener("ended", async ()=>{
       ctx.rotate(m.ang);
       const w=(m.r*2)*camera.zoom;
       const h=(m.r*2)*camera.zoom;
+
+      // Bright halo (visibility at high speed)
+      const glowR = Math.max(w,h) * 3.2;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 1.0;
+      ctx.shadowColor = "rgba(170,240,255,0.95)";
+      ctx.shadowBlur = 140 * camera.zoom;
+      const g = ctx.createRadialGradient(0,0,0, 0,0, glowR*0.5);
+      g.addColorStop(0, "rgba(255,255,255,0.85)");
+      g.addColorStop(0.35, "rgba(180,245,255,0.55)");
+      g.addColorStop(1, "rgba(120,200,255,0.00)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0,0, glowR*0.5, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+
+      // SECOND_GLOW_PASS
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 1.0;
+      ctx.shadowColor = "rgba(255,220,120,0.95)";
+      ctx.shadowBlur = 180 * camera.zoom;
+      const g2 = ctx.createRadialGradient(0,0,0, 0,0, glowR*0.75);
+      g2.addColorStop(0, "rgba(255,245,210,0.55)");
+      g2.addColorStop(0.45, "rgba(255,220,140,0.35)");
+      g2.addColorStop(1, "rgba(255,210,120,0.00)");
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(0,0, glowR*0.75, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+
       ctx.globalAlpha=0.95;
       if(meteorImgReady) ctx.drawImage(meteorImg,-w/2,-h/2,w,h);
       ctx.restore();
     }
-  }
-  function drawMeteorShards(){
+  }  function drawMeteorShards(){
     if(!meteorImgReady) return;
     ctx.save();
     for(const s of meteorShards){
@@ -1739,7 +1890,7 @@ introVideo.addEventListener("ended", async ()=>{
 
   // ---------- Countdown overlay ----------
   function drawCountdownOverlay(){
-    if(gameState!=="race" || raceStarted) return;
+    if(gameState!=="race" || raceStarted || waitingForTap) return;
     ctx.save();
     ctx.fillStyle="rgba(0,0,0,0.30)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -1782,17 +1933,21 @@ introVideo.addEventListener("ended", async ()=>{
   function showPostResults(me){
     gameState="post";
     postUI.style.display="grid";
+    try{ endaudio.currentTime = 0; endaudio.play(); }catch{}
 
     const kmh = bestKmh;
     postPlace = me.place || 1;
-    const txt =
-`HAS QUEDADO EN ${postPlace} POSICIÓN
 
-Velocidad máxima: ${kmh} Km/h
-Tiempo: ${formatTime(raceTime)}
-Checkpoints: ${Math.min(me.cpIndex, NUM_CPS)}/${NUM_CPS}
-Hits: ${me.hits}/${MAX_HITS}`;
-    postStats.textContent = txt;
+    // RESULTADO solicitado:
+    // - Quitar "X POSICIÓN"
+    // - Tiempo arriba y el doble de grande
+    // - Velocidad en formato "VELOCIDAD: XXX KM/H"
+    // - Quitar checkpoints
+    // - Hits el doble de grande
+    postStats.innerHTML =
+      `<div class="timeLine"><b>TIEMPO:</b> ${formatTime(raceTime)}</div>` +
+      `<div class="statLine"><b>VELOCIDAD:</b> ${kmh} KM/H</div>` +
+      `<div class="hitsLine"><b>HITS:</b> ${me.hits}/${MAX_HITS}</div>`;
   }
 
   // ---------- Collisions: ship-ship ----------
@@ -1886,13 +2041,16 @@ Hits: ${me.hits}/${MAX_HITS}`;
     ship.px = ship.x; ship.py = ship.y;
 
     if(gameState==="race"){
-      if(!raceStarted){
+      if(!waitingForTap){
+        if(!raceStarted){
         ship.thrust=0; ship.brake=0; ship.boost=0; ship.reverse=0; ship.steer*=0.6;
-      }else if(!ship.finished){
+      }
+      else if(!ship.finished){
         if(ship.isAI) handleAI(ship, dt);
         else handlePlayer(ship, dt);
       }else{
         ship.boost=0; ship.thrust=0; ship.brake=1; ship.reverse=0;
+      }
       }
     } else {
       ship.thrust=0; ship.brake=0; ship.boost=0; ship.reverse=0;
@@ -2029,7 +2187,7 @@ Hits: ${me.hits}/${MAX_HITS}`;
 
   // ---------- Menu ----------
   const INTRO_TEXT =
-`¡Bienvenid@s pilotos!
+`¡Bienvenidos pilotos!
 
 Abróchense bien los cinturones y prepárense para demostrar sus habilidades en este simulador de carreras con la tecnología de hipermotores ICARUS.
 
@@ -2039,7 +2197,28 @@ Gracias por formar parte de este programa para pilotos avanzados como usted.
 
 Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para optimizar la construcción de la futura primera colonia lunar.
 
-3,2,1...GO!`;
+3,2,1...¡GO!`;
+
+  function introToHtml(txt){
+    // Escape then bold specific phrases
+    const esc = (s)=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    let h = esc(txt);
+    const bold = [
+      "¡Bienvenidos pilotos!",
+      "ICARUS 3",
+      "ICARUS",
+      "Confederación del Pacífico",
+      "colonia lunar",
+      "3,2,1...¡GO!"
+    ];
+    for(const w of bold){
+      // Replace all occurrences, case-sensitive (text matches exactly)
+      h = h.split(w).join("<b>"+w+"</b>");
+    }
+    // Preserve line breaks
+    return h.replace(/\n/g,"<br>");
+  }
+
 
   const tips = [
     "Tip: Rompe meteoritos con BOOST para recargar más.",
@@ -2076,9 +2255,9 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
 
       menuContent.innerHTML = `
         <button class="menuBtn primaryGold" id="startRace">START RACE</button>
-        <button class="menuBtn secondary" id="howTo">Cómo jugar</button>
-        <button class="menuBtn secondary" id="intro">Introducción</button>
-        <button class="menuBtn secondary" id="discoverIcarus">Descubre ICARUS</button>
+        <button class="menuBtn secondary" id="howTo">CÓMO JUGAR</button>
+        <button class="menuBtn secondary" id="intro">INTRODUCCIÓN</button>
+        <button class="menuBtn secondary" id="discoverIcarus">DESCUBRE ICARUS</button>
         <div class="tipLine">${tip}</div>
       `;
 
@@ -2135,9 +2314,9 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
 
     } else if(menuMode === "howto"){
       menuContent.innerHTML = `
-        <div class="subTitle">Cómo jugar</div>
+        <div class="subTitle">CÓMO JUGAR</div>
         <div class="subText">
-🎯 Objetivo: completa el circuito desde START hasta FINISH antes que tus rivales, usando BOOST y habilidad para esquivar meteoritos.
+🎯 <b>Objetivo</b>: completa el circuito desde START hasta FINISH antes que tus rivales, usando BOOST y habilidad para esquivar meteoritos.
 
 🔹 Rompe meteoritos con BOOST.
 🔹 Rebufo = recarga extra.
@@ -2159,7 +2338,7 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
 
     } else if(menuMode === "intro"){
       menuContent.innerHTML = `
-        <div class="subTitle">Introducción</div>
+        <div class="subTitle">INTRODUCCIÓN</div>
         <div class="subText centered" id="introBox"></div>
         <button class="menuBtn secondary" id="backMenu">VOLVER A MENU</button>
       `;
@@ -2177,7 +2356,7 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
         box.textContent = INTRO_TEXT.slice(0, typedIndex);
         if(typedIndex >= INTRO_TEXT.length){
           clearTypewriter();
-          box.textContent = INTRO_TEXT;
+          box.innerHTML = introToHtml(INTRO_TEXT);
         }
       }, 44);
     }
@@ -2186,6 +2365,8 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
   // ---------- Flow ----------
   async function showMenu(){
     postUI.style.display="none";
+    waitingForTap=false;
+    if(raceStartOverlay) raceStartOverlay.style.display="none";
     if(touchControls) touchControls.classList.add("hidden");
     gameState="menu";
     menuMode="main";
@@ -2210,32 +2391,48 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
     bestKmh = 0;
   }
 
-  function startRaceFlow(){
-    postUI.style.display="none";
-    
-
-    
-
-    if (isMobile) {
-      window.location.href = "index_mobile.html";
-      return;
+  function showRaceStartOverlay(){
+    waitingForTap = true;
+    if(raceCodeEl){
+      const n = Math.floor(2065 + Math.random()*(2072-2065+1));
+      raceCodeEl.textContent = String(n);
     }
-stopMenuMusic();
+    if(raceStartOverlay) raceStartOverlay.style.display = "grid";
+  }
+
+  async function unlockAndStartRace(){
+    if(!waitingForTap) return;
+    waitingForTap = false;
+    if(raceStartOverlay) raceStartOverlay.style.display = "none";
+    // Start audio (requires user gesture on mobile)
+    try{ await startShipAudioLoops(); }catch{}
+    try{ await playRaceMusic(); }catch{}
+    countdown = 3.2;
+    try{ sfx321.currentTime = 0; sfx321.play(); }catch{}
+    raceStarted = false;
+    raceTime = 0;
+    shipAudio.startPlayed = false;
+  }
+
+  if(raceStartGo){
+    raceStartGo.addEventListener("click", unlockAndStartRace);
+  }
+function startRaceFlow(){
+    postUI.style.display="none";
+
+    stopMenuMusic();
     stopIntroNarr();
-    playRaceMusic();
 
     gameState="race";
     menuEl.style.display="none";
 
-    
-
     if(touchControlsEl) touchControlsEl.classList.remove("hidden");
-countdown=3.2;
-    raceStarted=false;
-    raceTime=0;
-    bestKmh=0;
 
+    bestKmh=0;
     resetRaceEntities(true);
+
+    // Show start overlay with random race code (unlock audio + start countdown)
+    showRaceStartOverlay();
   }
 
   function resetRaceEntities(genMets){
@@ -2299,19 +2496,32 @@ countdown=3.2;
     showMenu();
   });
 
-  // Restart
-  restartBtn.addEventListener("click",()=>{
-    if(gameState==="race"){
-      countdown=3.2; raceStarted=false; raceTime=0;
-      bestKmh=0;
-      resetRaceEntities(true);
-      shipAudio.startPlayed = false;
-      postUI.style.display="none";
-    } else {
-      showMenu();
-    }
-  });
+  // Restart (reinicia la carrera actual sin salir)
+  restartBtn.addEventListener("click", async ()=>{
+    try{ restartSfx.currentTime = 0; await restartSfx.play(); }catch{}
+    // Si estamos en menú, no hacemos nada aquí
+    if(gameState==="menu") return;
 
+    // Reinicio completo de la carrera actual
+    postUI.style.display="none";
+    waitingForTap = false;
+
+    countdown = 3.2;
+    raceStarted = false;
+    raceTime = 0;
+    bestKmh = 0;
+    shipAudio.startPlayed = false;
+
+    resetRaceEntities(true);
+
+    // Vuelve a mostrar la ventana de inicio (sin salir de la pantalla)
+    showRaceStartOverlay();
+
+    // Asegura audio tras gesto
+    try{ await startShipAudioLoops(); }catch{}
+    try{ await playRaceMusic(); }catch{}
+    gameState = "race";
+  });
   // Mobile/desktop: exit current race to main menu
   exitToMenuBtn.addEventListener("click", ()=>{
     showMenu();
@@ -2346,15 +2556,17 @@ countdown=3.2;
     last=now;
 
     if(gameState==="race"){
-      if(!raceStarted){
+      if(!waitingForTap){
+        if(!raceStarted){
         countdown -= dt;
         if(countdown <= 0){
           raceStarted=true;
           countdown=0;
           playShipStartOnce();
         }
-      } else {
-        raceTime += dt;
+        } else {
+          raceTime += dt;
+        }
       }
     }
 
