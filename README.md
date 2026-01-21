@@ -2,8 +2,8 @@
 
 ICARUS RACERS es un prototipo de videojuego de carreras futuristas desarrollado en HTML5 Canvas + JavaScript, con estética sci-fi, música integrada y una experiencia completamente jugable desde el navegador.
 
-Versión actual: v0.7
-Estado: Prototype / Experimental
+Versión actual: v0.9
+
 
 🎮 Descripción
 
