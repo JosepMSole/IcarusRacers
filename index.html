@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ICARUS RACERS (v0.8-9)</title>
+  <title>ICARUS RACERS (v1.7)</title>
+  <link rel="icon" href="ICO.ico">
   <style>
     html, body { margin:0; height:100%; background:#070b18; color:#e6f0ff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
     #wrap { height:100%; display:grid; place-items:center; }
@@ -158,6 +159,52 @@
       font-size:12px;
       opacity:.78;
     }
+
+    .counterHUD{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border:1px solid rgba(180,210,255,0.16);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08), 0 14px 40px rgba(0,0,0,0.25);
+    }
+    .counterLabel{
+      font-size:11px;
+      letter-spacing:1.2px;
+      text-transform:uppercase;
+      opacity:.78;
+      margin-bottom:6px;
+    }
+    .counterValue{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-weight:900;
+      font-size:28px;
+      letter-spacing:2px;
+      text-shadow: 0 0 18px rgba(80,140,255,.35);
+    }
+    .counterSub{
+      margin-top:6px;
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      align-items:center;
+      font-size:11px;
+      letter-spacing:.8px;
+      opacity:.70;
+      text-transform:uppercase;
+    }
+    .counterDot{
+      width:8px; height:8px;
+      border-radius:999px;
+      background:rgba(255,90,90,.95);
+      box-shadow:0 0 12px rgba(255,90,90,.65);
+      animation: counterPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes counterPulse{
+      0%,100%{ transform:scale(.9); opacity:.65; }
+      50%{ transform:scale(1.15); opacity:1; }
+    }
+
 
     /* ship select */
     .shipGrid{
@@ -583,7 +630,57 @@
   #versionTag{ bottom: 28px; }
 }
 
-</style>
+
+    #introIco{
+      width:100%;
+      height:auto;
+      display:block;
+      margin:0 0 12px 0;
+      border-radius:12px;
+    }
+
+    /* Mobile lock screen (shown AFTER pressing INICIAR on mobile) */
+    #mobileBlock{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      background:#000;
+      display:none;
+      pointer-events:auto;
+    }
+    #mobileBlock img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    /* Volume control (menu) */
+    .volRow{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .volToggle{
+      cursor:pointer;
+      user-select:none;
+      padding:8px 10px;
+      border-radius:12px;
+      background:rgba(80,140,255,.16);
+      border:1px solid rgba(140,190,255,.22);
+      font-weight:800;
+      letter-spacing:.5px;
+    }
+    .volToggle.off{ opacity:.6; filter:grayscale(.6); }
+    .volSlider{
+      flex:1;
+      accent-color:#f3c24b;
+      height:24px;
+    }
+
+  </style>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute">
@@ -609,13 +706,17 @@
     </video>
     <div id="introTap">
       <div class="card">
-        
+        <img id="introIco" src="ICO.ico" alt="ICO">
         <div class="btn2" id="introStartBtn">INICIAR</div>
       </div>
     </div>
   </div>
 
-  <div id="versionTag">v0.8-9</div>
+  <div id="mobileBlock" style="display:none;">
+    <img src="imagen/EXCLUSIVO_DESKTOP.jpg" alt="EXCLUSIVO DESKTOP">
+  </div>
+
+  <div id="versionTag">v1.7</div>
 
   <div class="hud">
     <div class="pill"><b>Controls</b> — ↑ acel · ↓ freno (2s = reverse) · ←/→ girar · <b>Espacio</b> boost</div>
@@ -696,6 +797,103 @@
   const logoImg = document.getElementById('logo');
   const menuVideo = document.getElementById('menuVideo');
 
+  // ---------- Global arcade counter (CounterAPI V1, sin auth) ----------
+  // Nota: es un contador "arcade" público (cualquiera podría incrementarlo si conoce la URL).
+  const COUNTERAPI_NAMESPACE = "icarus-racers";
+  const COUNTERAPI_NAME = "race-completions";
+  const COUNTERAPI_BASE = "https://api.counterapi.dev/v1";
+
+  let globalRaceCountCache = null;
+  let globalRaceCountLastFetch = 0;
+  let counterRefreshTimer = null;
+
+  const counterApiUrl = (suffix="") =>
+    `${COUNTERAPI_BASE}/${encodeURIComponent(COUNTERAPI_NAMESPACE)}/${encodeURIComponent(COUNTERAPI_NAME)}${suffix}`;
+
+  function parseCounterValue(j){
+    // CounterAPI suele devolver { value: number, ... } (pero lo parseamos de forma defensiva)
+    if(j == null) return null;
+    if(typeof j === "number") return j;
+    if(typeof j.value === "number") return j.value;
+    if(typeof j.data === "number") return j.data;
+    if(j.data && typeof j.data.value === "number") return j.data.value;
+    if(typeof j.count === "number") return j.count;
+    return null;
+  }
+
+  function formatCount(n){
+    if(typeof n !== "number" || !Number.isFinite(n)) return "—";
+    // Estilo "odómetro" simple: 7 dígitos, con ceros a la izquierda
+    return String(Math.max(0, Math.floor(n))).padStart(7, "0");
+  }
+
+  function renderGlobalRaceCount(n){
+    const el = document.getElementById("globalRaceCount");
+    if(!el) return;
+    el.textContent = formatCount(n);
+    el.dataset.raw = (typeof n === "number" ? String(n) : "");
+  }
+
+  async function fetchGlobalRaceCount({ force=false } = {}){
+    const now = Date.now();
+    if(!force && (now - globalRaceCountLastFetch) < 8000 && globalRaceCountCache != null){
+      renderGlobalRaceCount(globalRaceCountCache);
+      return globalRaceCountCache;
+    }
+    globalRaceCountLastFetch = now;
+
+    try{
+      const r = await fetch(counterApiUrl(""), { method:"GET", cache:"no-store" });
+      const j = await r.json();
+      const v = parseCounterValue(j);
+      if(v != null){
+        globalRaceCountCache = v;
+        renderGlobalRaceCount(v);
+      }else{
+        renderGlobalRaceCount(globalRaceCountCache);
+      }
+      return globalRaceCountCache;
+    }catch(e){
+      // Si falla, mantenemos lo que tengamos (o "—")
+      renderGlobalRaceCount(globalRaceCountCache);
+      return globalRaceCountCache;
+    }
+  }
+
+  async function incrementGlobalRaceCount(){
+    try{
+      const r = await fetch(counterApiUrl("/up"), { method:"GET", cache:"no-store" });
+      const j = await r.json();
+      const v = parseCounterValue(j);
+      if(v != null){
+        globalRaceCountCache = v;
+        globalRaceCountLastFetch = Date.now();
+        renderGlobalRaceCount(v);
+      }
+      return globalRaceCountCache;
+    }catch(e){
+      return globalRaceCountCache;
+    }
+  }
+
+  function startCounterAutoRefresh(){
+    stopCounterAutoRefresh();
+    // Refresca cada 15s mientras estemos en el menú (para que se sienta "vivo")
+    counterRefreshTimer = setInterval(()=>{
+      if(gameState === "menu" && menuMode === "main"){
+        fetchGlobalRaceCount({ force:false });
+      }
+    }, 15000);
+  }
+
+  function stopCounterAutoRefresh(){
+    if(counterRefreshTimer){
+      clearInterval(counterRefreshTimer);
+      counterRefreshTimer = null;
+    }
+  }
+
+
   // Mantén el video de fondo del menú reproduciéndose en mobile (al volver a la pestaña o si se pausa)
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
@@ -747,19 +945,38 @@
   }, 500);
 }
 
+  
+  function isMobileDevice(){
+    const ua = (navigator.userAgent || navigator.vendor || window.opera || "").toLowerCase();
+    const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints||0) > 0;
+    return /android|iphone|ipad|ipod|iemobile|opera mini|mobile|tablet/.test(ua) || (isTouch && Math.min(screen.width, screen.height) < 820);
+  }
+  const mobileBlock = document.getElementById("mobileBlock");
+  function showMobileLock(){
+    if(!mobileBlock) return;
+    mobileBlock.style.display = "block";
+    // hard block
+    document.body.style.overflow = "hidden";
+    try{ introVideo.pause(); }catch{}
+  }
+
   introStartBtn.addEventListener("click", async ()=>{
+    // After pressing INICIAR, block mobile completely
+    if(isMobileDevice()){
+      showMobileLock();
+      return;
+    }
     try{
+      // Start intro video WITH audio (respect user volume)
       introVideo.muted = false;
-      introVideo.volume = 1.0;
+      introVideo.volume = effectiveVol(); // 0..1
       await introVideo.play();
       // overlay will hide on 'playing'/'timeupdate'
     }catch{
       showIntroTap();
     }
   });
-
-
-  // Cannot skip: block all keys during intro
+// Cannot skip: block all keys during intro
   function blockKeysDuringIntro(e){
     if(introOverlay.style.display !== "none"){
       e.preventDefault();
@@ -863,6 +1080,101 @@ introVideo.addEventListener("ended", async ()=>{
   const endaudio = new Audio("music/endaudio.mp3");
   endaudio.loop = false;
   endaudio.volume = 0.95;
+  // ---------- User Volume (menu slider) ----------
+  const BASE_VOLS = {
+    menuMusic: 0.4125,
+    raceMusic: 0.45,
+    introNarr: 0.85,
+    ohno: 0.95,
+    restartSfx: 0.90,
+    sfx321: 0.95,
+    endaudio: 0.95,
+    shipIdle: 0.22,
+    shipThrottle: 0.30,
+    shipBoost: 0.34,
+    shipBrake: 0.22,
+    shipStart: 0.55,
+    shipHit: 0.80
+  };
+
+  const VOL_STORE_KEY = "icarus_volume_v1";
+  let userVolEnabled = true;
+  let userVol = 0.7;
+
+  function loadUserVolume(){
+    try{
+      const raw = localStorage.getItem(VOL_STORE_KEY);
+      if(raw){
+        const obj = JSON.parse(raw);
+        if(typeof obj.enabled === "boolean") userVolEnabled = obj.enabled;
+        if(typeof obj.vol === "number" && isFinite(obj.vol)) userVol = Math.max(0, Math.min(1, obj.vol));
+      }
+    }catch{}
+  }
+  function saveUserVolume(){
+    try{ localStorage.setItem(VOL_STORE_KEY, JSON.stringify({enabled:userVolEnabled, vol:userVol})); }catch{}
+  }
+
+  function effectiveVol(){ return userVolEnabled ? userVol : 0; }
+
+  function applyUserVolume(){
+    const v = effectiveVol();
+    // Music / UI SFX
+    menuMusic.volume   = BASE_VOLS.menuMusic * v;
+    raceMusic.volume   = BASE_VOLS.raceMusic * v;
+    introNarr.volume   = BASE_VOLS.introNarr * v;
+    ohno.volume        = BASE_VOLS.ohno * v;
+    restartSfx.volume  = BASE_VOLS.restartSfx * v;
+    sfx321.volume      = BASE_VOLS.sfx321 * v;
+    endaudio.volume    = BASE_VOLS.endaudio * v;
+
+    // Ship audio
+    try{
+      shipAudio.idle.volume     = BASE_VOLS.shipIdle * v;
+      shipAudio.throttle.volume = BASE_VOLS.shipThrottle * v;
+      shipAudio.boost.volume    = BASE_VOLS.shipBoost * v;
+      shipAudio.brake.volume    = BASE_VOLS.shipBrake * v;
+      shipAudio.start.volume    = BASE_VOLS.shipStart * v;
+      shipAudio.hit.volume      = BASE_VOLS.shipHit * v;
+    }catch{}
+
+    // WebAudio SFX
+    try{
+      if(masterGain) masterGain.gain.value = 0.9 * v;
+    }catch{}
+  }
+
+  function bindVolumeControls(){
+    const t = document.getElementById("volToggle");
+    const s = document.getElementById("volSlider");
+    if(!t || !s) return;
+
+    // init UI
+    t.classList.toggle("off", !userVolEnabled);
+    t.textContent = "VOLUMEN: " + (userVolEnabled ? "ON" : "OFF");
+    s.value = String(Math.round(userVol * 100));
+    s.disabled = !userVolEnabled;
+
+    t.onclick = ()=>{
+      userVolEnabled = !userVolEnabled;
+      saveUserVolume();
+      applyUserVolume();
+      t.classList.toggle("off", !userVolEnabled);
+      t.textContent = "VOLUMEN: " + (userVolEnabled ? "ON" : "OFF");
+      s.disabled = !userVolEnabled;
+    };
+
+    s.oninput = ()=>{
+      userVol = Math.max(0, Math.min(1, Number(s.value)/100));
+      saveUserVolume();
+      applyUserVolume();
+    };
+  }
+
+  loadUserVolume();
+  // apply once at startup (safe even before audio plays)
+  applyUserVolume();
+
 
 async function playMenuMusic(){ try{ await menuMusic.play(); }catch{} }
   function stopMenuMusic(){ try{ menuMusic.pause(); menuMusic.currentTime=0; }catch{} }
@@ -1933,6 +2245,9 @@ async function playMenuMusic(){ try{ await menuMusic.play(); }catch{} }
   function showPostResults(me){
     gameState="post";
     postUI.style.display="grid";
+
+    // Suma +1 al contador global de carreras completadas (arcade)
+    incrementGlobalRaceCount();
     try{ endaudio.currentTime = 0; endaudio.play(); }catch{}
 
     const kmh = bestKmh;
@@ -2254,12 +2569,24 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
       const tip = nextTip();
 
       menuContent.innerHTML = `
+        <div class="counterHUD">
+  <div class="counterSub" style="font-weight:900; letter-spacing:.7px; text-transform:uppercase;">
+    <span class="counterDot"></span>TOTAL DE TESTS REALIZADOS:
+  </div>
+  <div class="counterValue" id="globalRaceCount">—</div>
+</div>
+
+<div class="volRow">
+  <div class="volToggle" id="volToggle">VOLUMEN: ON</div>
+  <input class="volSlider" id="volSlider" type="range" min="0" max="100" value="70" />
+</div>
         <button class="menuBtn primaryGold" id="startRace">START RACE</button>
         <button class="menuBtn secondary" id="howTo">CÓMO JUGAR</button>
         <button class="menuBtn secondary" id="intro">INTRODUCCIÓN</button>
         <button class="menuBtn secondary" id="discoverIcarus">DESCUBRE ICARUS</button>
         <div class="tipLine">${tip}</div>
       `;
+      bindVolumeControls();
 
       menuContent.querySelector("#startRace").addEventListener("click", ()=>{
         menuMode = "select";
@@ -2277,6 +2604,9 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
       menuContent.querySelector("#intro").addEventListener("click", ()=>{
         menuMode="intro"; renderMenu();
       });
+
+      // Actualiza contador global (modo arcade)
+      fetchGlobalRaceCount({ force:false });
 
     } else if(menuMode === "select"){
       const items = shipDefs.map(s => `
@@ -2373,6 +2703,10 @@ Gracias a sus progresos, podremos desarrollar nuevos y mejores modelos para opti
     renderMenu();
     menuEl.style.display="grid";
 
+    // Contador global (menu)
+    fetchGlobalRaceCount({ force:true });
+    startCounterAutoRefresh();
+
     
     if(touchControlsEl) touchControlsEl.classList.add("hidden");
 // Asegura que el video del menú está visible y vuelve a reproducirse (mobile-safe)
@@ -2425,6 +2759,8 @@ function startRaceFlow(){
 
     gameState="race";
     menuEl.style.display="none";
+
+    stopCounterAutoRefresh();
 
     if(touchControlsEl) touchControlsEl.classList.remove("hidden");
 
